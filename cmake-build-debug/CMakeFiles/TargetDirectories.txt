@@ -1,0 +1,3 @@
+C:/Users/Krzysztof/Desktop/chess/cmake-build-debug/CMakeFiles/parser.dir
+C:/Users/Krzysztof/Desktop/chess/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/Krzysztof/Desktop/chess/cmake-build-debug/CMakeFiles/rebuild_cache.dir
