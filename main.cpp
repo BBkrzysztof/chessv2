@@ -1,15 +1,16 @@
 #include <iostream>
 #include "Bitboard.h"
-#include "MoveGenerator/PieceMoveMask/RookMoveMask.hpp"
-#include "MoveGenerator/PieceMoveMask/BishopMoveMask.hpp"
-#include "MoveGenerator/PieceMoveMask/QueenMoveMask.hpp"
+#include "MoveGenerator/PieceAttacks/KnightAttack.hpp"
+#include "MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp"
+#include "MoveGenerator/PieceRelevantFieldsMask/BishopRelevantMoveMask.hpp"
+#include "MoveGenerator/PieceRelevantFieldsMask/QueenRelevantMoveMask.hpp"
 
 
 int main() {
 
-    BitBoard board1 = BishopMoveMask::generate(1);
-    BitBoard board2 = RookMoveMask::generate(1);
-    BitBoard board3 = QueenMoveMask::generate(1);
+    BitBoard board1 = BishopRelevantMoveMask::generateRelevantFieldsMask(1);
+    BitBoard board2 = RookRelevantMoveMask::generateRelevantFieldsMask(1);
+    BitBoard board3 = QueenRelevantMoveMask::generateRelevantFieldsMask(1);
 
 
     Bitboards::print_bb(board1);
@@ -21,7 +22,7 @@ int main() {
 
     std::cout<<"\n\n\n================================================\n\n\n";
 
-    Bitboards::print_bb(board3);
+    Bitboards::print_bb(KnightAttack::generateKnightAttacks(14));
 
 
     return 0;

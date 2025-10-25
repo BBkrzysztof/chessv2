@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(chess
         temp_main.cpp
-        MoveGenerator/PieceMoveMask/RookMoveMask.hpp
-        MoveGenerator/PieceMoveMask/BishopMoveMask.hpp
+        MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp
+        MoveGenerator/PieceRelevantFieldsMask/BishopRelevantMoveMask.hpp
 )
 
 FetchContent_Declare(
@@ -18,7 +18,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(catch2)
 
 add_executable(tests
-        Tests/MaskMoveTests.cpp
+        Tests/RelevantFieldsTests.cpp
+        Tests/SlidingAttacksTest.cpp
 )
 
 target_include_directories(tests PRIVATE ${PROJECT_SOURCE_DIR}/../include)
