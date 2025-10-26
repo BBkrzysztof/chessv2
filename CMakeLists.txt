@@ -5,9 +5,14 @@ include(FetchContent)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(chess
-        temp_main.cpp
+        main.cpp
         MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp
         MoveGenerator/PieceRelevantFieldsMask/BishopRelevantMoveMask.hpp
+        MoveGenerator/PieceAttacks/PawnAttack.hpp
+        MoveGenerator/PieceAttacks/KingAttack.hpp
+        MoveGenerator/PreComputedMoves/PreComputedMoves.hpp
+        MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
+        MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
 )
 
 FetchContent_Declare(
@@ -27,4 +32,4 @@ target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 enable_testing()
 add_test(NAME unit_tests COMMAND tests)
 
-target_compile_options(chess PRIVATE -O3 -march=native -mbmi2)
+target_compile_options(chess PRIVATE -O3 -march=native)

@@ -6,7 +6,7 @@ class KnightAttack {
 
 
 public:
-    BitBoard static generateKnightAttacks(const uint8_t &position) {
+    BitBoard static generateKnightAttacks(const uint8_t& position) {
         const BitBoard pos = Bitboards::bit(position);
         BitBoard result = 0;
 

@@ -17,13 +17,6 @@
 //
 //     return 0;
 // }
-
-#include <cstdint>
-#include <vector>
-#include <array>
-#include <iostream>
-#include <iomanip>
-#include <immintrin.h> // _pext_u64 (BMI2). Jeśli brak, ustaw USE_PEXT=false.
 //
 // using U64 = uint64_t;
 //
@@ -129,5 +122,5 @@
 //               << " attacks=0x" << attacksAll
 //               << " legal=0x" << legalPseudo << std::dec << "\n";
 // }
-
-
+//
+//

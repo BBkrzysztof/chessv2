@@ -1,6 +1,7 @@
 #include <iostream>
 #include "Bitboard.h"
 #include "MoveGenerator/PieceAttacks/KnightAttack.hpp"
+#include "MoveGenerator/PieceAttacks/PawnAttack.hpp"
 #include "MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp"
 #include "MoveGenerator/PieceRelevantFieldsMask/BishopRelevantMoveMask.hpp"
 #include "MoveGenerator/PieceRelevantFieldsMask/QueenRelevantMoveMask.hpp"
@@ -22,7 +23,7 @@ int main() {
 
     std::cout<<"\n\n\n================================================\n\n\n";
 
-    Bitboards::print_bb(KnightAttack::generateKnightAttacks(14));
+    Bitboards::print_bb(PawnAttack::generateWhitePawnAttacks(1));
 
 
     return 0;
