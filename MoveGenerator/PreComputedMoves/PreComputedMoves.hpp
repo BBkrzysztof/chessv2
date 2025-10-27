@@ -14,9 +14,13 @@
 #include "../PieceSlidingAttack/RookSlidingAttack.hpp"
 
 struct PreComputedMoves {
-    std::vector<BitBoard> bishop;
-    std::vector<BitBoard> rook;
-    std::vector<BitBoard> queen;
+    std::vector<BitBoard> bishop[64];
+    std::vector<BitBoard> rook[64];
+    std::vector<BitBoard> queen[64];
+
+    BitBoard bishopMask[64]{};
+    BitBoard rookMask[64]{};
+    BitBoard queenMask[64]{};
 
     BitBoard knight[64]{};
     BitBoard king[64]{};
@@ -58,27 +62,31 @@ public:
             moves->whitePawn[i] = PawnAttack::generateWhitePawnAttacks(i);
             moves->blackPawn[i] = PawnAttack::generateBlackPawnAttacks(i);
 
+
+            moves->bishopMask[i] = BishopRelevantMoveMask::generateRelevantFieldsMask(i);
             // MagicBoard for bishop
             precompute(
                 i,
-                BishopRelevantMoveMask::generateRelevantFieldsMask(i),
-                moves->bishop,
+                moves->bishopMask[i],
+                moves->bishop[i],
                 BishopSlidingAttack::generateSlidingAttacks
             );
 
+            moves->rookMask[i]=RookRelevantMoveMask::generateRelevantFieldsMask(i);
             // MagicBoard for rook
             precompute(
                 i,
-                RookRelevantMoveMask::generateRelevantFieldsMask(i),
-                moves->bishop,
+                moves->rookMask[i],
+                moves->rook[i],
                 RookSlidingAttack::generateSlidingAttacks
             );
 
+            moves->queenMask[i]=QueenRelevantMoveMask::generateRelevantFieldsMask(i);
             // MagicBoard for queen
             precompute(
                 i,
-                QueenRelevantMoveMask::generateRelevantFieldsMask(i),
-                moves->bishop,
+                moves->queenMask[i],
+                moves->queen[i],
                 QueenSlidingAttack::generateSlidingAttacks
             );
         }
