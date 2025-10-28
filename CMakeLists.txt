@@ -13,6 +13,7 @@ add_executable(chess
         MoveGenerator/PreComputedMoves/PreComputedMoves.hpp
         MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
         MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
+        MoveGenerator/Move/Move.hpp
 )
 
 FetchContent_Declare(

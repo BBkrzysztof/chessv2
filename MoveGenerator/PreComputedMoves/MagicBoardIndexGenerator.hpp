@@ -1,3 +1,4 @@
+#pragma once
 #include "../../Bitboard.h"
 #if defined(__x86_64__) || defined(_M_X64)
 #if defined(__BMI2__)

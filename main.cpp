@@ -1,5 +1,7 @@
 #include <iostream>
 #include "Bitboard.h"
+#include "cmake-build-debug/_deps/catch2-src/src/catch2/internal/catch_stdstreams.hpp"
+#include "MoveGenerator/Move/Move.hpp"
 #include "MoveGenerator/PieceAttacks/KnightAttack.hpp"
 #include "MoveGenerator/PieceAttacks/PawnAttack.hpp"
 #include "MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp"
@@ -39,7 +41,7 @@ int main() {
     // f4 (file 5, rank 3) -> 29 (czarny)
     // d2 (file 3, rank 1) -> 11 (czarny)
     // b4 (file 1, rank 3) -> 25 (biały, żeby pokazać odfiltrowanie własnych)
-    black |= Bitboards::bit(59) | Bitboards::bit(29) | Bitboards::bit(11);
+    black |= Bitboards::bit(43) | Bitboards::bit(29) | Bitboards::bit(11);
     white |= Bitboards::bit(25) | Bitboards::bit(27); // nasza wieża + biały bloker na b4
     BitBoard occAll = white | black;
 
@@ -49,8 +51,8 @@ int main() {
     BitBoard relevant = occAll & mask;
     const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-    BitBoard attacks = precomputed->rook[idx][64-sqR];
-    // BitBoard legalPseudo = attacks & ~white;
+    BitBoard attacks = precomputed->rook[sqR][idx];
+    BitBoard legalPseudo = attacks & ~white;
 
     // --- 4) WIZUALIZACJA ---
     std::cout << "Mask (relevant squares for rook @ d4):\n";
@@ -58,7 +60,21 @@ int main() {
     std::cout << "\nOccupancy (all pieces):\n";
     Bitboards::print_bb(occAll);
     std::cout << "\nRook attacks from d4 (pseudo-legal, after filtering own pieces):\n";
-    Bitboards::print_bb(attacks);
+    Bitboards::print_bb(legalPseudo);
+
+    std::cout << std::hex << "\npseudoLegal=0x" <<legalPseudo<<std::endl;
+
+    Move::MoveList movesQueue;
+
+    Move::extractMovesFromBitboard(
+        sqR,
+        legalPseudo,
+        movesQueue
+    );
+
+    for (const auto move : movesQueue.m) {
+        std::cout<<"from: "<<(int)Move::moveFrom(move)<<"\n to: "<<(int)Move::moveTo(move)<<"\n\n";
+    }
 
     return 0;
 }

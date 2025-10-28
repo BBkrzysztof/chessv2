@@ -29,6 +29,8 @@ namespace Bitboards {
     static uint8_t row_of(const uint8_t &sq) { return sq >> 3; }
     static int popCount64(const BitBoard &x) { return __builtin_popcountll(x); }
     static int getPos(const int &row, const int &col) { return row * 8 + col; }
+    static  int  lsb_index(const BitBoard& b){ return __builtin_ctzll(b); }
+    static  void pop_lsb(BitBoard& b){ b &= (b - 1); }
 
     static std::vector<BitBoard> allSubsets(const BitBoard& mask) {
         std::vector<BitBoard> v;
@@ -40,9 +42,6 @@ namespace Bitboards {
         }
         return v;
     }
-
-
-
 
     static void print_bb(const BitBoard &b) {
         for (int r = 7; r >= 0; --r) {
