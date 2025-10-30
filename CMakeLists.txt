@@ -14,6 +14,8 @@ add_executable(chess
         MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
         MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
         MoveGenerator/Move/Move.hpp
+        Board/Board.hpp
+        Parser/Parser.cpp
 )
 
 FetchContent_Declare(
@@ -23,10 +25,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(catch2)
 
-add_executable(tests
-        Tests/RelevantFieldsTests.cpp
-        Tests/SlidingAttacksTest.cpp
+file(GLOB_RECURSE TEST_SOURCES
+        CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/Tests/**/*.cpp"
 )
+
+add_executable(tests ${TEST_SOURCES})
+
 
 target_include_directories(tests PRIVATE ${PROJECT_SOURCE_DIR}/../include)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)

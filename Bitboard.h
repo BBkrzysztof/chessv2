@@ -51,5 +51,7 @@ namespace Bitboards {
             }
             std::cout << "\n";
         }
+        std::cout << std::hex << "\nmask=0x" <<b<<std::endl;
+
     }
 }

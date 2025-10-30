@@ -2,13 +2,16 @@
 #include <cstdint>
 
 namespace Move {
-    enum MoveType : uint16_t { MT_NORMAL = 0, MT_CASTLE = 1, MT_ENPASSANT = 2, MT_PROMOTION = 3 };
 
-    enum Promo : uint16_t { PR_KNIGHT = 0, PR_BISHOP = 1, PR_ROOK = 2, PR_QUEEN = 3 };
+    typedef uint16_t Move;
+
+    enum MoveType : Move { MT_NORMAL = 0, MT_CASTLE = 1, MT_ENPASSANT = 2, MT_PROMOTION = 3 };
+
+    enum Promo : Move { PR_KNIGHT = 0, PR_BISHOP = 1, PR_ROOK = 2, PR_QUEEN = 3 };
 
     struct MoveList {
-        std::vector<uint16_t> m;
-        void push(const uint16_t x) { m.push_back(x); }
+        std::vector<Move> m;
+        void push(const Move x) { m.push_back(x); }
     };
 
     /**
@@ -17,20 +20,21 @@ namespace Move {
      * @param to target position index
      * @param moveType move type
      * @param promotion promotion type
-     * @return uint16_t encoded move
+     * @return Move encoded move
      */
-    static uint16_t encodeMove(
+    static Move encodeMove(
         const int &from,
         const int &to,
         const MoveType &moveType = MT_NORMAL,
         const Promo &promotion = PR_QUEEN
     ) {
-        return static_cast<uint16_t>((moveType << 14) | (promotion << 12) | (from << 6) | to);
+        return static_cast<Move>((moveType << 14) | (promotion << 12) | (from << 6) | to);
     }
 
-    inline uint8_t moveFrom(const uint16_t &m) { return (m >> 6) & 0x3F; }
-    inline uint8_t moveTo(const uint16_t &m) { return m & 0x3F; }
-
+    inline uint8_t moveFrom(const Move &m) { return (m >> 6) & 0x3F; }
+    inline uint8_t moveTo(const Move &m) { return m & 0x3F; }
+    inline MoveType moveType(const Move &m) { return static_cast<MoveType>((m >> 14) & 0x3); }
+    inline Promo movePromo(const Move &m) { return static_cast<Promo>((m >> 12) & 0x3); }
     /**
      *
      * @param from from position index

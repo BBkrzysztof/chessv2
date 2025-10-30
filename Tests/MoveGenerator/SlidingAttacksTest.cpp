@@ -5,15 +5,13 @@
 #include <algorithm>
 
 #include <catch2/catch_test_macros.hpp>
-#include "utils.hpp"
-#include "../MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp"
-#include "../MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp"
-#include "../MoveGenerator/PreComputedMoves/PreComputedMoves.hpp"
-#include "../MoveGenerator/Move/Move.hpp"
+#include "../../MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp"
+#include "../../MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp"
+#include "../../MoveGenerator/PreComputedMoves/PreComputedMoves.hpp"
+#include "../../MoveGenerator/Move/Move.hpp"
 
 
 using namespace Bitboards;
-using namespace Tests;
 using namespace Move;
 
 const auto precomputed = PreComputedMovesGenerator::generate();
