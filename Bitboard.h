@@ -14,6 +14,7 @@ namespace Bitboards {
     static constexpr BitBoard FILE_G = 0x4040404040404040ULL;
     static constexpr BitBoard FILE_H = 0x8080808080808080ULL;
 
+    static constexpr BitBoard ROW_1 = 0x00000000000000FFULL;
     static constexpr BitBoard ROW_2 = 0x000000000000FF00ULL;
     static constexpr BitBoard ROW_3 = 0x0000000000FF0000ULL;
     static constexpr BitBoard ROW_4 = 0x00000000FF000000ULL;

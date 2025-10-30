@@ -46,7 +46,7 @@ public:
     int ep = -1;
     int halfMove = 0;
     int fullMove = 1;
-    int kingSq[2]{60, 4};
+    int8_t kingSq[2]{60, 4};
 
 public:
      Board() = default;
