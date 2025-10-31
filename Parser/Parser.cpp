@@ -2,236 +2,178 @@
 
 #include <string>
 #include <sstream>
-#include <utility>
 
-#include "utils/GameStateContainer.cpp"
+#include "../Board/Board.hpp"
 
-using namespace std;
 
 class Parser {
-private:
-
-    const int EN_PASSANT_COLUMN_START_POSITION = 2;
-
-    int rowCounter = 0;
-    int columnCounter = 0;
-
-    string enp;
-    string::iterator fenIterator;
-    string::iterator fenIteratorEnd;
-
 public:
+    static std::unique_ptr<Board> loadFen(const std::string_view fen) {
+        using namespace std::literals;
+        auto board = std::make_unique<Board>();
 
-    explicit Parser(string enp) {
-        this->enp = std::move(enp);
-        this->fenIterator = this->enp.begin();
-        this->fenIteratorEnd = this->enp.end();
-    }
 
-    unique_ptr<GameStateContainer> parseFen() {
+        // 1) Podziel na 6 pól FEN
+        // [0] piece placement, [1] side, [2] castling, [3] ep, [4] halfmove, [5] fullmove
+        std::string_view fields[6];
+        {
+            size_t i = 0, start = 0, f = 0;
+            while (i <= fen.size() && f < 6) {
+                if (i == fen.size() || fen[i] == ' ') {
+                    if (i > start) fields[f++] = fen.substr(start, i - start);
+                    start = i + 1;
+                }
+                ++i;
+            }
+        }
 
-        auto gameStateContainer = std::make_unique<GameStateContainer>();
-        auto rawPtr = gameStateContainer.get();
+        // 3) Piece placement
+        {
+            const auto &pp = fields[0];
+            int row = 7, col = 0; // zaczynamy od rank 8 (row=7), do 1 (row=0)
+            for (size_t i = 0; i < pp.size(); ++i) {
+                char c = pp[i];
+                if (c == '/') {
+                    --row;
+                    col = 0;
+                    continue;
+                }
+                if (std::isdigit(static_cast<unsigned char>(c))) {
+                    int empty = c - '0';
+                    col += empty;
+                    continue;
+                }
+                PieceColor pieceColor;
+                PieceType pieceType;
+                fenCharToPieceTypeAndColor(c, pieceColor, pieceType);
 
-        this->parsePieces(rawPtr);
-        this->parseGameState(rawPtr);
-        this->parseEnPassant(rawPtr);
-        this->parseMovesAndHalfMoves(rawPtr);
+                const auto sq = static_cast<uint8_t>(row * 8 + col);
+                board->setPiece(pieceColor, pieceType, sq);
+                ++col;
+            }
+        }
 
-        return std::move(gameStateContainer);
-    }
+        // 4) Side to move
+        {
+            char c = fields[1][0];
+            if (c == 'w') board->side = PieceColor::WHITE;
+            else if (c == 'b') board->side = PieceColor::BLACK;
+        }
 
-    static string encodeBoard(const GameStateContainer* container) {
-        map<unsigned char, bitset<64>> parsedBoards = container->getBoards();
-
-        int blancSpace = 0;
-
-        stringstream fen;
-
-        for (int i = 63; i >= 0; i--) {
-            bool printed = false;
-
-            for (const auto& element: parsedBoards) {
-                if (element.second[i] != 0) {
-
-                    if (blancSpace != 0) {
-                        fen << blancSpace;
-                        blancSpace = 0;
+        // 5) Castling rights
+        {
+            board->castle = 0;
+            auto cs = fields[2];
+            if (cs == "-"sv) {
+                // brak praw
+            } else {
+                for (const char &c: cs) {
+                    switch (c) {
+                        case 'K': board->castle |= 1;
+                            break; // white short
+                        case 'Q': board->castle |= 2;
+                            break; // white long
+                        case 'k': board->castle |= 4;
+                            break; // black short
+                        case 'q': board->castle |= 8;
+                            break; // black long
                     }
-                    fen << element.first;
-                    printed = true;
-                    break;
                 }
             }
-
-            if (!printed) {
-                blancSpace++;
-            }
-
-            if (i % 8 == 0 && i != 0) {
-                if (blancSpace != 0) {
-                    fen << blancSpace;
-                    blancSpace = 0;
-                }
-
-                fen << "/";
-            }
         }
 
-        return fen.str();
-    }
-
-    static string encodeGameState(const string& encodedBoard, const GameStateContainer* container) {
-        stringstream fen;
-
-        fen << encodedBoard;
-        char turn = container->isWhiteTurn() ? 'w' : 'b';
-
-        fen << " " << turn << " ";
-
-        if (container->getWhiteKingCastle()) {
-            fen << "K";
-        }
-        if (container->getWhiteQueenCastle()) {
-            fen << "Q";
-        }
-        if (container->getBlackKingCastle()) {
-            fen << "k";
-        }
-        if (container->getBlackQueenCastle()) {
-            fen << "q";
+        // 6) En passant
+        {
+            board->ep = parseEpSquare(fields[3]);
         }
 
-        if (
-                !container->getWhiteKingCastle() &&
-                !container->getWhiteQueenCastle() &&
-                !container->getBlackKingCastle() &&
-                !container->getBlackQueenCastle()
-                ) {
-            fen << "-";
-        }
+        // 7) Opcjonalne halfmove/fullmove
+        if (!fields[4].empty()) {
+            parseUint(fields[4], board->halfMove);
+        } else board->halfMove = 0;
 
-        fen << " ";
+        if (!fields[5].empty()) {
+            parseUint(fields[5], board->fullMove);
+            if (board->fullMove < 1) board->fullMove = 1;
+        } else board->fullMove = 1;
 
-        fen << container->getEnPassantMove() << " ";
-        fen << container->getHalfMoveCounter() << " ";
-        fen << container->getMoveCounter();
-
-        return fen.str();
+        return board;
     }
 
 private:
+    static int fileCharToCol(const char &f) {
+        if (f < 'a' || f > 'h') return -1;
+        return static_cast<int>(f - 'a');
+    }
 
-    void parsePieces(GameStateContainer* gameStateContainer) {
-        while (this->fenIterator != this->fenIteratorEnd) {
-            auto token = this->consume();
+    static int rankCharToRow(const char &r) {
+        if (r < '1' || r > '8') return -1;
+        return static_cast<int>(r - '1');
+    }
 
-            if (isdigit(token)) {
-                int number = ((int) token) - 48;
-                if (number == 8) {
-                    continue;
-                }
-                this->columnCounter += number;
-                continue;
-            }
+    // Zwraca sq (0..63) lub -1 gdy brak („-”)
+    static int parseEpSquare(const std::string_view tok) {
+        if (tok == "-"sv) return -1;
+        if (tok.size() != 2) return -1;
+        int col = fileCharToCol(tok[0]);
+        int row = rankCharToRow(tok[1]);
+        if (col < 0 || row < 0) return -1;
+        return row * 8 + col;
+    }
 
-            if (token == ' ') {
+    static void parseUint(const std::string_view tok, int &out) {
+        int v = 0;
+        for (char c: tok) {
+            v = v * 10 + (c - '0');
+        }
+        out = v;
+    }
+
+    static void fenCharToPieceTypeAndColor(
+        const char &c,
+        PieceColor &col,
+        PieceType &pc
+    ) {
+        switch (c) {
+            // białe
+            case 'P': col = PieceColor::WHITE;
+                pc = PieceType::PAWN;
                 break;
-            }
-
-            if (token == '/') {
-                this->columnCounter = 0;
-                this->rowCounter++;
-                continue;
-            }
-
-            gameStateContainer->placePiece(token, this->rowCounter, this->columnCounter);
-
-            this->columnCounter++;
-        }
-    }
-
-    void parseGameState(GameStateContainer* gameStateContainer) {
-        this->columnCounter = 0;
-
-        while (this->fenIterator != this->fenIteratorEnd) {
-            const auto token = this->consume();
-            if (token == ' ') {
-                this->columnCounter += 1;
-
-                if (columnCounter == Parser::EN_PASSANT_COLUMN_START_POSITION) {
-                    break;
-                }
-
-                continue;
-            }
-
-            switch (token) {
-                case 'K':
-                case 'Q':
-                case 'k':
-                case 'q':
-                    gameStateContainer->updateCastles(token);
-                    break;
-                case 'w':
-                    gameStateContainer->setWhiteTurn(true);
-                    break;
-                case 'b':
-                    gameStateContainer->setWhiteTurn(false);
-                    break;
-                case '-':
-                default:
-                    continue;
-            }
-
-
-        }
-    }
-
-    void parseEnPassant(GameStateContainer* gameStateContainer) {
-        this->columnCounter = 0;
-
-        string buffer;
-
-        while (this->fenIterator != this->fenIteratorEnd) {
-            const auto token = this->consume();
-            if (token == ' ') {
+            case 'N': col = PieceColor::WHITE;
+                pc = PieceType::KNIGHT;
                 break;
-            }
-            buffer += token;
-        }
-
-        gameStateContainer->setEnPassantMove(buffer);
-    }
-
-    void parseMovesAndHalfMoves(GameStateContainer* gameStateContainer) {
-        this->columnCounter = 0;
-
-        string buffer1, buffer2;
-
-        while (this->fenIterator != this->fenIteratorEnd) {
-            const auto token = this->consume();
-            if (token == ' ') {
+            case 'B': col = PieceColor::WHITE;
+                pc = PieceType::BISHOP;
                 break;
-            }
-            buffer1 += token;
-        }
-
-        while (this->fenIterator != this->fenIteratorEnd) {
-            const auto token = this->consume();
-            if (token == ' ') {
+            case 'R': col = PieceColor::WHITE;
+                pc = PieceType::ROOK;
                 break;
-            }
-            buffer2 += token;
+            case 'Q': col = PieceColor::WHITE;
+                pc = PieceType::QUEEN;
+                break;
+            case 'K': col = PieceColor::WHITE;
+                pc = PieceType::KING;
+                break;
+            // czarne
+            case 'p': col = PieceColor::BLACK;
+                pc = PieceType::PAWN;
+                break;
+            case 'n': col = PieceColor::BLACK;
+                pc = PieceType::KNIGHT;
+                break;
+            case 'b': col = PieceColor::BLACK;
+                pc = PieceType::BISHOP;
+                break;
+            case 'r': col = PieceColor::BLACK;
+                pc = PieceType::ROOK;
+                break;
+            case 'q': col = PieceColor::BLACK;
+                pc = PieceType::QUEEN;
+                break;
+            case 'k': col = PieceColor::BLACK;
+                pc = PieceType::KING;
+                break;
+            default: break;
         }
-
-        gameStateContainer->setHalfMoveCounter(stoi(buffer1));
-        gameStateContainer->setMoveCounter(stoi(buffer2));
-
     }
-
-    unsigned char consume() {
-        return *this->fenIterator++;
-    }
-
 };

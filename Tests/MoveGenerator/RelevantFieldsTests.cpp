@@ -1,17 +1,11 @@
 #include <cstdint>
 #include <vector>
-#include <array>
-#include <limits>
-#include <algorithm>
 
 #include <catch2/catch_test_macros.hpp>
-#include "../MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp"
-#include "../MoveGenerator/PieceRelevantFieldsMask/BishopRelevantMoveMask.hpp"
+#include "../../MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp"
+#include "../../MoveGenerator/PieceRelevantFieldsMask/BishopRelevantMoveMask.hpp"
 
-#include "../MoveGenerator/PieceSlidingAttack/BishopSlidingAttack.hpp"
-#include "../MoveGenerator/PieceSlidingAttack/RookSlidingAttack.hpp"
-
-#include "../Bitboard.h"
+#include "../../Bitboard.h"
 
 TEST_CASE("Rook relevant mask excludes edge squares (d4)", "[mask][rook]") {
     const int sq = Bitboards::getPos(3, 3);

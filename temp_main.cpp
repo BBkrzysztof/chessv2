@@ -17,13 +17,6 @@
 //
 //     return 0;
 // }
-
-#include <cstdint>
-#include <vector>
-#include <array>
-#include <iostream>
-#include <iomanip>
-#include <immintrin.h> // _pext_u64 (BMI2). Jeśli brak, ustaw USE_PEXT=false.
 //
 // using U64 = uint64_t;
 //
@@ -109,7 +102,7 @@
 //     int k = popcount64(mask);
 //     uint64_t idx = USE_PEXT ? (uint64_t)_pext_u64(relevant, mask)
 //                             : (uint64_t)((relevant * magic) >> (64 - k));
-//     U64 attacksAll = table[idx];
+//      U64 attacksAll = table[idx];
 //
 //     // Usuwamy własne pola (nie możemy bić swoich bierek)
 //     U64 legalPseudo = attacksAll & ~white;
@@ -129,5 +122,5 @@
 //               << " attacks=0x" << attacksAll
 //               << " legal=0x" << legalPseudo << std::dec << "\n";
 // }
-
-
+//
+//

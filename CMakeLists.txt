@@ -5,9 +5,18 @@ include(FetchContent)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(chess
-        temp_main.cpp
+        main.cpp
         MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp
         MoveGenerator/PieceRelevantFieldsMask/BishopRelevantMoveMask.hpp
+        MoveGenerator/PieceAttacks/PawnAttack.hpp
+        MoveGenerator/PieceAttacks/KingAttack.hpp
+        MoveGenerator/PreComputedMoves/PreComputedMoves.hpp
+        MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
+        MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
+        MoveGenerator/Move/Move.hpp
+        Board/Board.hpp
+        Parser/Parser.cpp
+        MoveGenerator/PseudoLegalMovesGenerator/PseudoLegalMovesGenerator.hpp
 )
 
 FetchContent_Declare(
@@ -17,14 +26,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(catch2)
 
-add_executable(tests
-        Tests/RelevantFieldsTests.cpp
-        Tests/SlidingAttacksTest.cpp
+file(GLOB_RECURSE TEST_SOURCES
+        CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/Tests/**/*.cpp"
 )
+
+add_executable(tests ${TEST_SOURCES}
+        Tests/MoveGenerator/PseudoLegalMoves.cpp)
+
 
 target_include_directories(tests PRIVATE ${PROJECT_SOURCE_DIR}/../include)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 enable_testing()
 add_test(NAME unit_tests COMMAND tests)
 
-target_compile_options(chess PRIVATE -O3 -march=native -mbmi2)
+target_compile_options(chess PRIVATE -O3 -march=native)
