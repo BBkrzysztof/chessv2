@@ -17,6 +17,7 @@ add_executable(chess
         Board/Board.hpp
         Parser/Parser.cpp
         MoveGenerator/PseudoLegalMovesGenerator/PseudoLegalMovesGenerator.hpp
+        MoveGenerator/MoveExecutor/MoveExecutor.hpp
 )
 
 FetchContent_Declare(
@@ -31,8 +32,7 @@ file(GLOB_RECURSE TEST_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/Tests/**/*.cpp"
 )
 
-add_executable(tests ${TEST_SOURCES}
-        Tests/MoveGenerator/PseudoLegalMoves.cpp)
+add_executable(tests ${TEST_SOURCES})
 
 
 target_include_directories(tests PRIVATE ${PROJECT_SOURCE_DIR}/../include)
