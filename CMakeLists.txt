@@ -18,6 +18,10 @@ add_executable(chess
         Parser/Parser.cpp
         MoveGenerator/PseudoLegalMovesGenerator/PseudoLegalMovesGenerator.hpp
         MoveGenerator/MoveExecutor/MoveExecutor.hpp
+        Engine/SplitPoint/SplitPoint.hpp
+        Engine/ThreadPool/ThreadPool.hpp
+        Tests/Engine/ThreadPool/ThreadPool.cpp
+        Tests/Engine/TestUtils.hpp
 )
 
 FetchContent_Declare(
@@ -32,7 +36,9 @@ file(GLOB_RECURSE TEST_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/Tests/**/*.cpp"
 )
 
-add_executable(tests ${TEST_SOURCES})
+add_executable(tests ${TEST_SOURCES}
+        Tests/Engine/ThreadPool/ThreadPool.cpp
+        Tests/Engine/TestUtils.hpp)
 
 
 target_include_directories(tests PRIVATE ${PROJECT_SOURCE_DIR}/../include)
