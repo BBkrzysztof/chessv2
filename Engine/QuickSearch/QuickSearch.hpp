@@ -14,7 +14,7 @@ public:
         if (MoveExecutor::isCheck(board, us)) {
             auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
             bool found = false;
-            int best = Evaluation::MATE;
+            int best = Evaluation::NEG_INF;
 
             for (const auto &move: m) {
                 auto child = MoveExecutor::executeMove(board, move);
@@ -36,7 +36,7 @@ public:
             }
 
             if (!found) {
-                return -Evaluation::MATE;
+                return Evaluation::MATE;
             }
             return alpha;
         }

@@ -15,7 +15,7 @@ int main() {
 
 
     SearchConfig lim;
-    lim.maxDepth = 8;
+    lim.maxDepth = 6;
     lim.threads = std::thread::hardware_concurrency();
     lim.splitMinDepth = 6;
     lim.splitMinMoves = 6;

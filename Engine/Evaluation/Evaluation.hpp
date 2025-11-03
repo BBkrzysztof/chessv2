@@ -4,6 +4,8 @@
 class Evaluation {
 public:
     static constexpr int MATE = -300000;
+    static constexpr int INF = 1000000000;
+    static constexpr int NEG_INF = -INF;
 
     static constexpr int VALUE_PAWN = 100, VALUE_KNIGHT = 320, VALUE_BISHOP = 330, VALUE_ROOK = 500, VALUE_QUEEN = 900,
             VALUE_KING = 20000;

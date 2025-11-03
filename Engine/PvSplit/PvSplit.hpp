@@ -26,31 +26,34 @@ public:
             if (MoveExecutor::isCheck(board, us)) {
                 return Evaluation::MATE + ply;
             }
+
+            return 0;
         }
 
-        int best = Evaluation::MATE;
+        int best = Evaluation::NEG_INF;
         Move::Move bestMove = 0;
         int score = 0;
 
-        const auto firstMove = m[0];
-        const auto child = MoveExecutor::executeMove(board, firstMove);
+        if (!m.empty()) {
+            const auto firstMove = m[0];
+            const auto child = MoveExecutor::executeMove(board, firstMove);
 
-        if (!MoveExecutor::isCheck(child, us)) {
-            score = -PvSearch::search(child, -beta, -alpha, depth - 1);
+            if (!MoveExecutor::isCheck(child, us)) {
+                score = -PvSearch::search(child, -beta, -alpha, depth - 1, ply + 1);
 
-            if (score > best) {
-                best = score;
-                bestMove = firstMove;
-            }
+                if (score > best) {
+                    best = score;
+                    bestMove = firstMove;
+                }
 
-            if (score > alpha) {
-                alpha = score;
-                if (alpha >= beta) {
-                    return alpha;
+                if (score > alpha) {
+                    alpha = score;
+                    if (alpha >= beta) {
+                        return alpha;
+                    }
                 }
             }
         }
-
 
         const bool canSplit = depth >= config.splitMinDepth && m.size() > static_cast<size_t>(config.splitMinMoves) &&
                               pool.size() > 1;
@@ -59,34 +62,38 @@ public:
             SplitPoint sp(board, alpha, beta, depth, ply, true, m);
             sp.nextIdx.store(1, std::memory_order_relaxed);
             sp.bestMove = bestMove;
+            sp.bestScore.store(Evaluation::NEG_INF, std::memory_order_relaxed);
 
-            const unsigned workers = pool.size() - 1;
-            for (unsigned i = 0; i < workers; ++i) {
-                (void) pool.submit([&pool,&sp,us] {
-                    workerConsumeSplitPoint(pool, sp, us);
+            const unsigned toSpawn = std::min<unsigned>(pool.size() - 1, m.size() - 1);
+
+            for (unsigned i = 0; i < toSpawn; ++i) {
+                (void) pool.submit([&pool,&sp,us,ply] {
+                    workerConsumeSplitPoint(pool, sp, us, ply + 1);
                 });
             }
 
-            workerConsumeSplitPoint(pool, sp, us);
+            workerConsumeSplitPoint(pool, sp, us, ply + 1);
 
             while (sp.active.load(std::memory_order_relaxed) > 0) {
                 if (!pool.helpOneRound()) {
                     std::this_thread::yield();
                 }
             }
-            return sp.active.load(std::memory_order_relaxed);
+
+            const int spBest = sp.bestScore.load(std::memory_order_acquire);
+            return std::max(alpha, spBest);
         }
 
         for (size_t i = 1; i < m.size(); ++i) {
             auto move = m[i];
             const auto nextChild = MoveExecutor::executeMove(board, move);
-            if (!MoveExecutor::isCheck(nextChild, us)) {
+            if (MoveExecutor::isCheck(nextChild, us)) {
                 continue;
             }
-            score = -PvSearch::search(nextChild, -(-alpha + 1), -alpha, depth - 1);
+            score = -PvSearch::search(nextChild, -(alpha + 1), -alpha, depth - 1, ply + 1);
 
             if (score > alpha && score < beta) {
-                score = -PvSearch::search(nextChild, -beta, -alpha, depth - 1);
+                score = -PvSearch::search(nextChild, -beta, -alpha, depth - 1, ply + 1);
             }
             if (score > best) {
                 best = score;
@@ -104,7 +111,8 @@ public:
     }
 
 private:
-    static void workerConsumeSplitPoint(ThreadPool &pool, SplitPoint &splitPoint, const PieceColor &us) {
+    static void workerConsumeSplitPoint(ThreadPool &pool, SplitPoint &splitPoint, const PieceColor &us,
+                                        const int &ply) {
         splitPoint.active.fetch_add(1, std::memory_order_relaxed);
 
         while (!splitPoint.abort.load(std::memory_order_relaxed)) {
@@ -115,35 +123,34 @@ private:
 
             const Move::Move move = splitPoint.moves[i];
             std::unique_ptr<Board> child = MoveExecutor::executeMove(splitPoint.parent, move);
-            MoveExecutor::isCheck(child, splitPoint.parent->side);
 
-            if (child->isCheck) {
+            if (MoveExecutor::isCheck(child, splitPoint.parent->side)) {
                 continue;
             }
 
-            const int alpha = splitPoint.alpha.load(std::memory_order_relaxed);
+            const int alpha = splitPoint.alpha.load(std::memory_order_acquire);
             const int beta = splitPoint.beta;
 
-            int sc = PvSearch::search(child, -(alpha + 1), -alpha, splitPoint.depth + 1);
+            int sc = PvSearch::search(child, -(alpha + 1), -alpha, splitPoint.depth - 1, ply);
 
             if (sc > alpha && sc < beta) {
-                sc = PvSearch::search(child, -beta, -alpha, splitPoint.depth + 1);
-                pool.helpOneRound();
+                sc = PvSearch::search(child, -beta, -alpha, splitPoint.depth - 1, ply);
+                (void) pool.helpOneRound();
             }
 
-            int prevAlpha = splitPoint.alpha.load(std::memory_order_relaxed);
+            int prevAlpha = splitPoint.alpha.load(std::memory_order_acquire);
             while (sc > prevAlpha && !splitPoint.abort.load(std::memory_order_relaxed)) {
-                if (splitPoint.alpha.compare_exchange_weak(prevAlpha, sc, std::memory_order_relaxed)) {
-                    splitPoint.bestScore = sc;
+                if (splitPoint.alpha.compare_exchange_weak(prevAlpha, sc, std::memory_order_acquire)) {
+                splitPoint.bestScore.store(sc, std::memory_order_release);
                     splitPoint.bestMove = move;
                     if (sc > splitPoint.beta) {
-                        splitPoint.abort.store(true, std::memory_order_relaxed);
+                        splitPoint.abort.store(true, std::memory_order_release);
                         break;
                     }
                 }
             }
         }
 
-        splitPoint.active.fetch_sub(1, std::memory_order_relaxed);
+        splitPoint.active.fetch_sub(1, std::memory_order_acq_rel);
     }
 };

@@ -9,7 +9,7 @@ struct SplitPoint {
     std::atomic<int> alpha;
     const int beta;
 
-    int bestScore;
+    std::atomic<int> bestScore;
     Move::Move bestMove;
 
     const int depth;
@@ -25,7 +25,7 @@ struct SplitPoint {
 
     SplitPoint(const std::unique_ptr<Board> &parent, const int alpha, const int beta, const int depth, const int ply,
                const bool pvNode, const std::vector<Move::Move> &moves)
-        : alpha(alpha), beta(beta), bestScore(Evaluation::MATE), bestMove(0),
+        : alpha(alpha), beta(beta), bestScore(Evaluation::NEG_INF), bestMove(0),
           depth(depth), ply(ply), pvNode(pvNode), parent(parent), moves(moves) {
     }
 };
