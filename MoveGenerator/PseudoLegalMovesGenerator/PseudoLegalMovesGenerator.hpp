@@ -3,12 +3,13 @@
 #include "../../Board/Board.hpp"
 #include "../PreComputedMoves/PreComputedMoves.hpp"
 
+const auto preComputedMoves = PreComputedMovesGenerator::instance();
+
 class PseudoLegalMovesGenerator {
 public:
     static BitBoard getFieldsAttackedByColor(
         const PieceColor &color,
-        const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves
+        const std::unique_ptr<Board> &board
     ) {
         const BitBoard occupancyAll = board->occupancyAll;
         BitBoard attacks = 0ULL;
@@ -23,69 +24,68 @@ public:
         const BitBoard knights = board->pieces[color][PieceType::KNIGHT];
         for (BitBoard temp = knights; temp; Bitboards::pop_lsb(temp)) {
             const auto position = static_cast<uint8_t>(Bitboards::lsb_index(temp));
-            attacks |= preComputedMoves->knight[position];
+            attacks |= preComputedMoves.knight[position];
         }
 
         const BitBoard bishops = board->pieces[color][PieceType::BISHOP];
         for (BitBoard temp = bishops; temp; Bitboards::pop_lsb(temp)) {
             const auto position = static_cast<uint8_t>(Bitboards::lsb_index(temp));
-            const auto mask = preComputedMoves->bishopMask[position];
+            const auto mask = preComputedMoves.bishopMask[position];
 
             const auto relevant = mask & occupancyAll;
             const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-            attacks |= preComputedMoves->bishop[position][idx];
+            attacks |= preComputedMoves.bishop[position][idx];
         }
 
         const BitBoard rooks = board->pieces[color][PieceType::ROOK];
         for (BitBoard temp = rooks; temp; Bitboards::pop_lsb(temp)) {
             const auto position = static_cast<uint8_t>(Bitboards::lsb_index(temp));
-            const auto mask = preComputedMoves->rookMask[position];
+            const auto mask = preComputedMoves.rookMask[position];
 
             const auto relevant = mask & occupancyAll;
             const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-            attacks |= preComputedMoves->rook[position][idx];
+            attacks |= preComputedMoves.rook[position][idx];
         }
 
         const BitBoard queens = board->pieces[color][PieceType::QUEEN];
         for (BitBoard temp = queens; temp; Bitboards::pop_lsb(temp)) {
             const auto position = static_cast<uint8_t>(Bitboards::lsb_index(temp));
-            const auto mask = preComputedMoves->queenMask[position];
+            const auto mask = preComputedMoves.queenMask[position];
 
             const auto relevant = mask & occupancyAll;
             const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-            attacks |= preComputedMoves->queen[position][idx];
+            attacks |= preComputedMoves.queen[position][idx];
         }
 
         const BitBoard king = board->pieces[color][PieceType::KING];
-        attacks |= preComputedMoves->king[Bitboards::lsb_index(king)];
+        attacks |= preComputedMoves.king[Bitboards::lsb_index(king)];
 
         return attacks;
     }
 
     static Move::MoveList generatePseudoLegalMoves(
-        const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves
+        const std::unique_ptr<Board> &board
     ) {
         Move::MoveList moves;
 
         const PieceColor side = board->side;
 
         if (side == PieceColor::WHITE) {
-            getWhitePawnMoves(board,moves);
-        }else {
-            getBlackPawnMoves(board,moves);
+            getWhitePawnMoves(board, moves);
+        } else {
+            getBlackPawnMoves(board, moves);
         }
 
-        getKnightMoves(side,board,preComputedMoves,moves);
-        getBishopMoves(side,board,preComputedMoves,moves);
-        getRookMoves(side,board,preComputedMoves,moves);
-        getQueenMoves(side,board,preComputedMoves,moves);
-        getKingMovesWithoutCastle(side,board,preComputedMoves,moves);
+        getKnightMoves(side, board, moves);
+        getBishopMoves(side, board, moves);
+        getRookMoves(side, board, moves);
+        getQueenMoves(side, board, moves);
+        getKingMovesWithoutCastle(side, board, moves);
 
-        getCastles(side,board,preComputedMoves,moves);
+        getCastles(side, board, moves);
 
         return moves;
     }
@@ -94,10 +94,9 @@ public:
     static bool isSquareAttackedBy(
         const uint8_t &position,
         const PieceColor color,
-        const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves
+        const std::unique_ptr<Board> &board
     ) {
-        const BitBoard attacks = getFieldsAttackedByColor(color, board, preComputedMoves);
+        const BitBoard attacks = getFieldsAttackedByColor(color, board);
         return (attacks & Bitboards::bit(position)) != 0;
     }
 
@@ -105,12 +104,11 @@ private:
     static void getKingMovesWithoutCastle(
         const PieceColor &color,
         const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves,
         Move::MoveList &moveList
     ) {
         const BitBoard friendllyOccupation = board->occupancy[color];
         const auto from = static_cast<uint8_t>(Bitboards::lsb_index(board->pieces[color][PieceType::KING]));
-        const auto moves = preComputedMoves->king[from] & ~friendllyOccupation;
+        const auto moves = preComputedMoves.king[from] & ~friendllyOccupation;
 
         emitMoves(from, moves, moveList);
     }
@@ -118,14 +116,13 @@ private:
     static void getKnightMoves(
         const PieceColor &color,
         const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves,
         Move::MoveList &moveList
     ) {
         const BitBoard friendllyOccupation = board->occupancy[color];
 
         for (BitBoard temp = board->pieces[color][PieceType::KNIGHT]; temp; Bitboards::pop_lsb(temp)) {
             const auto from = static_cast<uint8_t>(Bitboards::lsb_index(temp));
-            const auto moves = preComputedMoves->knight[from] & ~friendllyOccupation;
+            const auto moves = preComputedMoves.knight[from] & ~friendllyOccupation;
             emitMoves(from, moves, moveList);
         }
     }
@@ -133,7 +130,6 @@ private:
     static void getBishopMoves(
         const PieceColor &color,
         const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves,
         Move::MoveList &moveList
     ) {
         const BitBoard friendllyOccupation = board->occupancy[color];
@@ -141,12 +137,12 @@ private:
 
         for (BitBoard temp = board->pieces[color][PieceType::BISHOP]; temp; Bitboards::pop_lsb(temp)) {
             const auto from = static_cast<uint8_t>(Bitboards::lsb_index(temp));
-            const auto mask = preComputedMoves->bishopMask[from];
+            const auto mask = preComputedMoves.bishopMask[from];
 
             const auto relevant = mask & occupancyAll;
             const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-            const auto moves = preComputedMoves->bishop[from][idx] & ~friendllyOccupation;
+            const auto moves = preComputedMoves.bishop[from][idx] & ~friendllyOccupation;
 
             emitMoves(from, moves, moveList);
         }
@@ -155,7 +151,6 @@ private:
     static void getRookMoves(
         const PieceColor &color,
         const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves,
         Move::MoveList &moveList
     ) {
         const BitBoard friendllyOccupation = board->occupancy[color];
@@ -163,12 +158,12 @@ private:
 
         for (BitBoard temp = board->pieces[color][PieceType::ROOK]; temp; Bitboards::pop_lsb(temp)) {
             const auto from = static_cast<uint8_t>(Bitboards::lsb_index(temp));
-            const auto mask = preComputedMoves->rookMask[from];
+            const auto mask = preComputedMoves.rookMask[from];
 
             const auto relevant = mask & occupancyAll;
             const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-            const auto moves = preComputedMoves->rook[from][idx] & ~friendllyOccupation;
+            const auto moves = preComputedMoves.rook[from][idx] & ~friendllyOccupation;
 
             emitMoves(from, moves, moveList);
         }
@@ -177,7 +172,6 @@ private:
     static void getQueenMoves(
         const PieceColor &color,
         const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves,
         Move::MoveList &moveList
     ) {
         const BitBoard friendllyOccupation = board->occupancy[color];
@@ -185,12 +179,12 @@ private:
 
         for (BitBoard temp = board->pieces[color][PieceType::QUEEN]; temp; Bitboards::pop_lsb(temp)) {
             const auto from = static_cast<uint8_t>(Bitboards::lsb_index(temp));
-            const auto mask = preComputedMoves->queenMask[from];
+            const auto mask = preComputedMoves.queenMask[from];
 
             const auto relevant = mask & occupancyAll;
             const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-            const auto moves = preComputedMoves->queen[from][idx] & ~friendllyOccupation;
+            const auto moves = preComputedMoves.queen[from][idx] & ~friendllyOccupation;
 
             emitMoves(from, moves, moveList);
         }
@@ -254,7 +248,7 @@ private:
         emitCapture(captureLeft, 7);
         emitCapture(captureRight, 9);
 
-        if (board->ep != 1) {
+        if (board->ep != -1) {
             const auto ep = static_cast<uint8_t>(board->ep);
             const auto enpassantBitboard = Bitboards::bit(ep);
             BitBoard src = ((enpassantBitboard >> 7) & ~Bitboards::FILE_A) | (
@@ -312,7 +306,7 @@ private:
             for (BitBoard temp = capture; temp; Bitboards::pop_lsb(temp)) {
                 const auto to = static_cast<uint8_t>(Bitboards::lsb_index(temp));
                 const uint8_t from = to + shift;
-                if (to >= 56) {
+                if (to <= 8) {
                     moveList.push(Move::encodeMove(from, to, Move::MoveType::MT_PROMOTION, Move::Promo::PR_QUEEN));
                     moveList.push(Move::encodeMove(from, to, Move::MoveType::MT_PROMOTION, Move::Promo::PR_ROOK));
                     moveList.push(Move::encodeMove(from, to, Move::MoveType::MT_PROMOTION, Move::Promo::PR_BISHOP));
@@ -326,11 +320,11 @@ private:
         emitCapture(captureLeft, 9);
         emitCapture(captureRight, 7);
 
-        if (board->ep != 1) {
+        if (board->ep != -1) {
             const auto ep = static_cast<uint8_t>(board->ep);
             const auto enpassantBitboard = Bitboards::bit(ep);
-            BitBoard src = ((enpassantBitboard << 7) & ~Bitboards::FILE_H) | (
-                               (enpassantBitboard << 9) & ~Bitboards::FILE_A);
+            BitBoard src = ((enpassantBitboard >> 9) & ~Bitboards::FILE_H) | (
+                               (enpassantBitboard << 7) & ~Bitboards::FILE_A);
             src &= pawns;
 
             for (BitBoard temp = src; temp; Bitboards::pop_lsb(temp)) {
@@ -343,7 +337,6 @@ private:
     static void getCastles(
         const PieceColor &color,
         const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves,
         Move::MoveList &moveList
     ) {
         const auto kingPosition = board->kingSq[color];
@@ -357,7 +350,7 @@ private:
         };
         auto safe = [&](const std::initializer_list<uint8_t> &sqs) {
             for (const uint8_t &s: sqs) {
-                if (isSquareAttackedBy(s, enemyColor, board, preComputedMoves)) return false;
+                if (isSquareAttackedBy(s, enemyColor, board)) return false;
             }
             return true;
         };

@@ -1,14 +1,14 @@
+#pragma once
+
 #include <memory>
 
 #include "../../Board/Board.hpp"
-#include "../PreComputedMoves/PreComputedMoves.hpp"
 #include "../PseudoLegalMovesGenerator/PseudoLegalMovesGenerator.hpp"
 
 class MoveExecutor {
 public:
     static std::unique_ptr<Board> executeMove(
         const std::unique_ptr<Board> &board,
-        const std::unique_ptr<PreComputedMoves> &preComputedMoves,
         const Move::Move &move
     ) {
         const auto us = board->side;
@@ -26,9 +26,11 @@ public:
 
         if (moveType != Move::MT_ENPASSANT) {
             const auto pieceOnTargetField = board->pieceOn[moveTo];
-            if (pieceOnTargetField > 0) {
-                const auto pieceOnTargetFieldType = static_cast<PieceType>(movedPieceCode % 6);
-
+            if (pieceOnTargetField >= 0) {
+                const auto pieceOnTargetFieldType = static_cast<PieceType>(pieceOnTargetField % 6);
+                if (pieceOnTargetField == 25) {
+                    std::cout<<pieceOnTargetField<<std::endl;
+                }
                 newBoard->removePiece(opponent, pieceOnTargetFieldType, moveTo);
                 newBoard->clearCastleByCapture(opponent, moveTo);
                 newBoard->halfMove = 0;
@@ -70,12 +72,12 @@ public:
                 } else {
                     if (moveTo == 62) {
                         // short: e8->g8, h8->f8
-                        newBoard->movePiece(WHITE, KING, 60, 62);
-                        newBoard->movePiece(WHITE, ROOK, 63, 61);
+                        newBoard->movePiece(BLACK, KING, 60, 62);
+                        newBoard->movePiece(BLACK, ROOK, 63, 61);
                     } else {
                         // long: e8->c8, a8->d8
-                        newBoard->movePiece(WHITE, KING, 60, 58);
-                        newBoard->movePiece(WHITE, ROOK, 56, 59);
+                        newBoard->movePiece(BLACK, KING, 60, 58);
+                        newBoard->movePiece(BLACK, ROOK, 56, 59);
                     }
                     newBoard->castle &= ~(4 | 8);
                 }
@@ -91,19 +93,22 @@ public:
                 break;
         };
 
+        newBoard->side = opponentColor(us);
+
+        return newBoard;
+    }
+
+    static bool isCheck(const std::unique_ptr<Board> &board, const PieceColor &us) {
         const auto enemyColor = opponentColor(us);
-        const auto kingPosition = newBoard->kingSq[us];
+        const auto kingPosition = board->kingSq[us];
 
         const auto isCheck = PseudoLegalMovesGenerator::isSquareAttackedBy(
             kingPosition,
             enemyColor,
-            newBoard,
-            preComputedMoves
+            board
         );
 
-        newBoard->isCheck = isCheck;
-        newBoard->side = enemyColor;
-
-        return newBoard;
+        board->isCheck = isCheck;
+        return isCheck;
     }
 };

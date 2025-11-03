@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <algorithm>
+#include <cstring>
 
 #include "../Bitboard.h"
 #include "../MoveGenerator/Move/Move.hpp"
@@ -43,7 +44,7 @@ public:
     BitBoard pieces[2][6]{};
     BitBoard occupancy[2]{};
     BitBoard occupancyAll{};
-    int8_t pieceOn[64]{};
+    int8_t pieceOn[64]{-1};
     PieceColor side = WHITE;
     int castle = 0;
     int ep = -1;
@@ -53,7 +54,9 @@ public:
     bool isCheck = false;
 
 public:
-     Board() = default;
+    Board() {
+        std::memset(this->pieceOn, -1, 64);
+    };
 
     ~Board() = default;
 
@@ -110,11 +113,21 @@ public:
         const BitBoard boardFrom = Bitboards::bit(from);
         const BitBoard boardTo = Bitboards::bit(to);
 
-        this->pieces[color][type] ^= (boardFrom | boardTo);
-        this->occupancy[color] ^= (boardFrom | boardTo);
-        this->occupancyAll ^= (boardFrom | boardTo);
-        this->pieceOn[from] = -1;
+        this->pieces[color][type] &= ~boardFrom;
+        this->occupancy[color] &= ~boardFrom;
+        this->occupancyAll &= ~boardFrom;
+
+        this->pieces[color][type] |= boardTo;
+        this->occupancy[color] |= boardTo;
+        this->occupancyAll |= boardTo;
+
+
         this->pieceOn[to] = static_cast<int8_t>(color * 6 + type);
+        this->pieceOn[from] = -1;
+
+        if (type == KING) {
+            this->kingSq[color] = to;
+        }
     }
 
     void clearCastleByMove(

@@ -14,7 +14,7 @@
 using namespace Bitboards;
 using namespace Move;
 
-const auto precomputed = PreComputedMovesGenerator::generate();
+const auto precomputed = PreComputedMovesGenerator::instance();
 
 TEST_CASE("Sliding Precomputed Rook Attacks", "[Rook sliding Attacks]") {
     const int sqR = 27; // white rook on d4
@@ -32,7 +32,7 @@ TEST_CASE("Sliding Precomputed Rook Attacks", "[Rook sliding Attacks]") {
     BitBoard relevant = occAll & mask;
     const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-    BitBoard attacks = precomputed->rook[sqR][idx];
+    BitBoard attacks = precomputed.rook[sqR][idx];
     BitBoard legalPseudo = attacks & ~white;
 
     REQUIRE(legalPseudo == 0x80834080800);
@@ -64,7 +64,7 @@ TEST_CASE("Sliding Precomputed Bishop Attacks", "[Bishop sliding Attacks]") {
     BitBoard relevant = occAll & mask;
     const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-    BitBoard attacks = precomputed->bishop[sqR][idx];
+    BitBoard attacks = precomputed.bishop[sqR][idx];
     BitBoard legalPseudo = attacks & ~white;
 
     REQUIRE(legalPseudo == 0x8041221400142241);

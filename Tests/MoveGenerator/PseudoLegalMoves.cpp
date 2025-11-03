@@ -13,8 +13,7 @@ TEST_CASE("Test all fields attacked by color", "[white][attacks]") {
 
     const auto result = PseudoLegalMovesGenerator::getFieldsAttackedByColor(
         PieceColor::WHITE,
-        board,
-        precomputed
+        board
     );
 
     REQUIRE(result == 0x1aa44ffff7e);
@@ -25,8 +24,7 @@ TEST_CASE("Count all pseudo legal moves (from start position is 20 legal moves a
     const auto board = Parser::loadFen(fen);
 
     const auto result = PseudoLegalMovesGenerator::generatePseudoLegalMoves(
-        board,
-        precomputed
+        board
     );
 
     REQUIRE(result.m.size() == 20);

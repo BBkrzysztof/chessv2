@@ -57,7 +57,7 @@ public:
         }
     }
 
-    unsigned size() const { return static_cast<unsigned>(this->workers.size()); }
+    [[nodiscard]] unsigned size() const { return static_cast<unsigned>(this->workers.size()); }
 
     template<typename F, class... Args>
     auto submit(F &&f, Args &&... args) -> std::future<std::invoke_result_t<F, Args...> > {
@@ -87,7 +87,7 @@ public:
     }
 
 
-    bool helpOneRound() {
+    bool helpOneRound() const {
         const auto n = static_cast<unsigned>(this->workers.size());
         for (unsigned victim = 0; victim < n; ++victim) {
             std::function<void()> task;
@@ -103,15 +103,15 @@ public:
                 task();
                 return true;
             }
-
-            std::this_thread::yield();
-            return false;
         }
+
+        std::this_thread::yield();
+        return false;
     }
 
 private:
     void workerLoop(const unsigned &id) {
-        auto &worker = this->workers[id];
+        const auto &worker = this->workers[id];
 
         std::mt19937_64 rng(id * 1469598103934665603ULL);
 
@@ -151,9 +151,10 @@ private:
 
             {
                 std::unique_lock<std::mutex> lock(worker->mutex);
-                worker->condition.wait_for(lock, std::chrono::milliseconds(1), [&] {
-                    return !this->stop.load(std::memory_order_relaxed) || !worker->tasks.empty();
-                });
+                // worker->condition.wait_for(lock, std::chrono::milliseconds(50), [&] {
+                //     return this->stop.load(std::memory_order_relaxed) || !worker->tasks.empty();
+                // });
+                worker->condition.wait(lock, [&] { return stop || !worker->tasks.empty(); });
             }
         }
     }
@@ -161,6 +162,6 @@ private:
 private:
     std::vector<std::unique_ptr<Worker> > workers;
 
-    std::atomic<bool> stop;
-    std::atomic<unsigned> roundRobin;
+    std::atomic<bool> stop{};
+    std::atomic<unsigned> roundRobin{};
 };

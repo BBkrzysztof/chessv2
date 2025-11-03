@@ -4,6 +4,8 @@ include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 17)
 
+
+
 add_executable(chess
         main.cpp
         MoveGenerator/PieceRelevantFieldsMask/RookRelevantMoveMask.hpp
@@ -18,10 +20,14 @@ add_executable(chess
         Parser/Parser.cpp
         MoveGenerator/PseudoLegalMovesGenerator/PseudoLegalMovesGenerator.hpp
         MoveGenerator/MoveExecutor/MoveExecutor.hpp
-        Engine/SplitPoint/SplitPoint.hpp
+        Engine/Utils/SplitPoint.hpp
         Engine/ThreadPool/ThreadPool.hpp
-        Tests/Engine/ThreadPool/ThreadPool.cpp
-        Tests/Engine/TestUtils.hpp
+        Engine/PvSplit/PvSplit.hpp
+        Engine/Utils/SearchConfig.hpp
+        Engine/Evaluation/Evaluation.hpp
+        Engine/QuickSearch/QuickSearch.hpp
+        Engine/PvSearch/PvSearch.hpp
+        Engine/Engine.hpp
 )
 
 FetchContent_Declare(
@@ -46,4 +52,9 @@ target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 enable_testing()
 add_test(NAME unit_tests COMMAND tests)
 
+# Optymalizacje jak chcesz (tu O3 + native)
 target_compile_options(chess PRIVATE -O3 -march=native)
+
+## AddressSanitizer: kompilator + linker
+#target_compile_options(chess PRIVATE -fsanitize=address -fno-omit-frame-pointer -g)
+#target_link_options(chess    PRIVATE -fsanitize=address)

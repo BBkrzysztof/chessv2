@@ -31,6 +31,16 @@ struct PreComputedMoves {
 
 
 class PreComputedMovesGenerator {
+public:
+    static PreComputedMoves &instance() {
+        static PreComputedMoves instance = [] {
+            return generate();
+        }();
+
+        return instance;
+    }
+
+public:
     void static precompute(
         const uint8_t &position,
         const BitBoard &mask,
@@ -51,42 +61,41 @@ class PreComputedMovesGenerator {
         }
     }
 
-public:
-    std::unique_ptr<PreComputedMoves> static generate() {
-        auto moves = std::make_unique<PreComputedMoves>();
+    PreComputedMoves static generate() {
+        PreComputedMoves moves;
 
         for (uint8_t i = 0; i < 64; i++) {
-            moves->king[i] = KingAttack::generateKingAttacks(i);
-            moves->knight[i] = KnightAttack::generateKnightAttacks(i);
+            moves.king[i] = KingAttack::generateKingAttacks(i);
+            moves.knight[i] = KnightAttack::generateKnightAttacks(i);
 
-            moves->whitePawn[i] = PawnAttack::generateWhitePawnAttacks(i);
-            moves->blackPawn[i] = PawnAttack::generateBlackPawnAttacks(i);
+            moves.whitePawn[i] = PawnAttack::generateWhitePawnAttacks(i);
+            moves.blackPawn[i] = PawnAttack::generateBlackPawnAttacks(i);
 
 
-            moves->bishopMask[i] = BishopRelevantMoveMask::generateRelevantFieldsMask(i);
+            moves.bishopMask[i] = BishopRelevantMoveMask::generateRelevantFieldsMask(i);
             // MagicBoard for bishop
             precompute(
                 i,
-                moves->bishopMask[i],
-                moves->bishop[i],
+                moves.bishopMask[i],
+                moves.bishop[i],
                 BishopSlidingAttack::generateSlidingAttacks
             );
 
-            moves->rookMask[i]=RookRelevantMoveMask::generateRelevantFieldsMask(i);
+            moves.rookMask[i] = RookRelevantMoveMask::generateRelevantFieldsMask(i);
             // MagicBoard for rook
             precompute(
                 i,
-                moves->rookMask[i],
-                moves->rook[i],
+                moves.rookMask[i],
+                moves.rook[i],
                 RookSlidingAttack::generateSlidingAttacks
             );
 
-            moves->queenMask[i]=QueenRelevantMoveMask::generateRelevantFieldsMask(i);
+            moves.queenMask[i] = QueenRelevantMoveMask::generateRelevantFieldsMask(i);
             // MagicBoard for queen
             precompute(
                 i,
-                moves->queenMask[i],
-                moves->queen[i],
+                moves.queenMask[i],
+                moves.queen[i],
                 QueenSlidingAttack::generateSlidingAttacks
             );
         }
