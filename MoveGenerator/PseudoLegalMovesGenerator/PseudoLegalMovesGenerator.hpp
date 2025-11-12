@@ -3,7 +3,7 @@
 #include "../../Board/Board.hpp"
 #include "../PreComputedMoves/PreComputedMoves.hpp"
 
-const auto preComputedMoves = PreComputedMovesGenerator::instance();
+inline const PreComputedMoves &preComputedMoves = PreComputedMovesGenerator::instance();
 
 class PseudoLegalMovesGenerator {
 public:

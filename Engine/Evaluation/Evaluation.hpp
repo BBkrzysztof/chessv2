@@ -3,7 +3,7 @@
 
 class Evaluation {
 public:
-    static constexpr int MATE = -300000;
+    static constexpr int MATE = 320000;
     static constexpr int INF = 1000000000;
     static constexpr int NEG_INF = -INF;
 
@@ -80,9 +80,21 @@ public:
         return getMaterialScore(board) + getPieceSquareTableScore(board);
     }
 
+    static int to_tt_score(int score, int ply) {
+        if (score >= MATE - 1000) return score + ply; // mate found for us
+        if (score <= -MATE + 1000) return score - ply; // mate found for them
+        return score;
+    }
+
+    static int from_tt_score(int score, int ply) {
+        if (score >= MATE - 1000) return score - ply;
+        if (score <= -MATE + 1000) return score + ply;
+        return score;
+    }
+
 private:
     static int getPieceSquareValue(const int *pst, const uint8_t position, const PieceColor c) {
-        return (c == PieceColor::WHITE) ? pst[position] : pst[position ^ 56];
+        return (c == PieceColor::WHITE) ? pst[position ^ 56] : pst[position];
     }
 
 
@@ -122,7 +134,7 @@ private:
                 score += (color == PieceColor::WHITE
                               ? +getPieceSquareValue(pst, position, color)
                               : -getPieceSquareValue(pst, position, color));
-                bb &= bb - 1;
+                bb &=(bb - 1);
             }
         };
 
@@ -131,13 +143,13 @@ private:
 
         acc(PieceColor::WHITE, PieceType::KNIGHT, PST_KNIGHT);
         acc(PieceColor::BLACK, PieceType::KNIGHT, PST_KNIGHT);
-
+        //
         acc(PieceColor::WHITE, PieceType::BISHOP, PST_BISHOP);
         acc(PieceColor::BLACK, PieceType::BISHOP, PST_BISHOP);
-
+        //
         acc(PieceColor::WHITE, PieceType::ROOK, PST_ROOK);
         acc(PieceColor::BLACK, PieceType::ROOK, PST_ROOK);
-
+        //
         acc(PieceColor::WHITE, PieceType::QUEEN, PST_QUEEN);
         acc(PieceColor::BLACK, PieceType::QUEEN, PST_QUEEN);
 

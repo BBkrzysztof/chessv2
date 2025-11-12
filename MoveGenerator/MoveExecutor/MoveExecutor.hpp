@@ -11,6 +11,7 @@ public:
         const std::unique_ptr<Board> &board,
         const Move::Move &move
     ) {
+        static int counter = 0;
         const auto us = board->side;
         const auto opponent = opponentColor(us);
 
@@ -29,7 +30,7 @@ public:
             if (pieceOnTargetField >= 0) {
                 const auto pieceOnTargetFieldType = static_cast<PieceType>(pieceOnTargetField % 6);
                 if (pieceOnTargetField == 25) {
-                    std::cout<<pieceOnTargetField<<std::endl;
+                    std::cout << pieceOnTargetField << std::endl;
                 }
                 newBoard->removePiece(opponent, pieceOnTargetFieldType, moveTo);
                 newBoard->clearCastleByCapture(opponent, moveTo);

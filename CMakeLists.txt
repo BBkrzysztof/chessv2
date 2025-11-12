@@ -28,6 +28,8 @@ add_executable(chess
         Engine/QuickSearch/QuickSearch.hpp
         Engine/PvSearch/PvSearch.hpp
         Engine/Engine.hpp
+        Engine/TranspositionTable/TranspositionTable.hpp
+        Engine/TranspositionTable/Zobrist.hpp
 )
 
 FetchContent_Declare(
@@ -55,6 +57,3 @@ add_test(NAME unit_tests COMMAND tests)
 # Optymalizacje jak chcesz (tu O3 + native)
 target_compile_options(chess PRIVATE -O3 -march=native)
 
-## AddressSanitizer: kompilator + linker
-#target_compile_options(chess PRIVATE -fsanitize=address -fno-omit-frame-pointer -g)
-#target_link_options(chess    PRIVATE -fsanitize=address)

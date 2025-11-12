@@ -1,14 +1,15 @@
 #pragma once
 #include <atomic>
 #include <condition_variable>
+#include <cstddef>
+#include <cstdint>
+#include <deque>
 #include <functional>
+#include <memory>
 #include <mutex>
-#include <queue>
+#include <random>
 #include <thread>
 #include <vector>
-#include <random>
-#include <chrono>
-#include <future>
 
 class ThreadPool;
 
@@ -21,147 +22,131 @@ struct Worker {
     std::thread thread;
 };
 
-
 class ThreadPool {
 public:
-    explicit ThreadPool(unsigned threadCount = std::thread::hardware_concurrency()) {
-        if (!threadCount) {
-            threadCount = 1;
-        }
-
-        this->stop = false;
-        this->roundRobin = 0;
-
-        this->workers.reserve(threadCount);
+    explicit ThreadPool(unsigned threadCount = std::thread::hardware_concurrency())
+        : stop(false), roundRobin(0) {
+        if (!threadCount) threadCount = 1;
+        workers.reserve(threadCount);
         for (unsigned i = 0; i < threadCount; ++i) {
-            this->workers.emplace_back(std::make_unique<Worker>());
-            auto &w = *this->workers.back();
-
+            workers.emplace_back(std::make_unique<Worker>());
+            auto &w = *workers.back();
             w.id = i;
             w.owner = this;
-            w.thread = std::thread([this,i] { this->workerLoop(i); });
+            w.thread = std::thread([this, i] { this->workerLoop(i); });
         }
-    };
+    }
 
     ~ThreadPool() {
-        this->stop.store(true, std::memory_order_relaxed);
-
-        for (const auto &worker: this->workers) {
-            std::lock_guard<std::mutex> lock(worker->mutex);
-            worker->condition.notify_all();
+        // sygnalizuj zamknięcie bez trzymania żadnych locków
+        stop.store(true, std::memory_order_release);
+        for (auto &w: workers) {
+            w->condition.notify_all();
         }
-        for (const auto &worker: this->workers) {
-            if (worker->thread.joinable()) {
-                worker->thread.join();
-            }
+        // join bez locków — bezpiecznie
+        for (auto &w: workers) {
+            if (w->thread.joinable()) w->thread.join();
         }
     }
 
-    [[nodiscard]] unsigned size() const { return static_cast<unsigned>(this->workers.size()); }
+    [[nodiscard]] unsigned size() const noexcept {
+        return static_cast<unsigned>(workers.size());
+    }
 
-    template<typename F, class... Args>
-    auto submit(F &&f, Args &&... args) -> std::future<std::invoke_result_t<F, Args...> > {
-        using return_type = std::invoke_result_t<F, Args...>;
-
-        auto task = std::make_shared<std::packaged_task<return_type()> >(
-            [fwdF = std::forward<F>(f), tup = std::make_tuple(std::forward<Args>(args)...)]() mutable -> return_type {
-                return std::apply([&](auto &&... a)-> return_type {
-                    return std::invoke(
-                        std::move(fwdF), std::forward<decltype(a)>(a)...);
-                }, std::move(tup));
-            }
-        );
-
-        auto future = task->get_future();
-
+    // Zawsze wzywaj notify_one po dodaniu zadania
+    template<class F>
+    void submit(F &&f) {
+        auto idx = roundRobin.fetch_add(1, std::memory_order_relaxed) % workers.size();
+        auto &w = *workers[idx];
         {
-            const unsigned victim = this->roundRobin.fetch_add(1, std::memory_order_relaxed) % this->workers.size();
-            std::lock_guard<std::mutex> lock(this->workers[victim]->mutex);
-            this->workers[victim]->tasks.emplace_front([task] {
-                (*task)();
-            });
-            this->workers[victim]->condition.notify_one();
+            std::lock_guard<std::mutex> lk(w.mutex);
+            w.tasks.emplace_back(std::forward<F>(f));
         }
-
-        return future;
+        w.condition.notify_one();
     }
 
+    bool helpOneRound() {
+        std::function<void()> job;
 
-    bool helpOneRound() const {
-        const auto n = static_cast<unsigned>(this->workers.size());
-        for (unsigned victim = 0; victim < n; ++victim) {
-            std::function<void()> task;
-            {
-                std::lock_guard<std::mutex> lock(this->workers[victim]->mutex);
-                if (!this->workers[victim]->tasks.empty()) {
-                    task = std::move(this->workers[victim]->tasks.back());
-                    this->workers[victim]->tasks.pop_back();
+        const auto n = workers.size();
+        if (!n) return false;
+
+        for (size_t k = 0; k < n; ++k) {
+            auto &w = *workers[(roundRobin.fetch_add(1, std::memory_order_relaxed)) % n];
+            if (w.mutex.try_lock()) {
+                if (!w.tasks.empty()) {
+                    job = std::move(w.tasks.back());
+                    w.tasks.pop_back();
+                    w.mutex.unlock();
+                    job();
+                    return true;
                 }
-            }
-
-            if (task) {
-                task();
-                return true;
+                w.mutex.unlock();
             }
         }
-
-        std::this_thread::yield();
         return false;
     }
 
 private:
-    void workerLoop(const unsigned &id) {
-        const auto &worker = this->workers[id];
+    friend struct Worker;
 
-        std::mt19937_64 rng(id * 1469598103934665603ULL);
+    void workerLoop(unsigned self) {
+        auto &me = *workers[self];
 
-        while (!stop.load(std::memory_order_relaxed)) {
-            std::function<void()> task;
+        // losowa kolejność ofiar do kradzieży (prosty RNG na wątku)
+        std::mt19937_64 rng(self * 1469598103934665603ULL + 0x9e3779b97f4a7c15ULL);
+        std::uniform_int_distribution<unsigned> dist(0, size() ? (size() - 1) : 0);
+
+        std::function<void()> job;
+
+        for (;;) {
             {
-                std::unique_lock<std::mutex> lock(worker->mutex);
-                if (!worker->tasks.empty()) {
-                    task = std::move(worker->tasks.front());
-                    worker->tasks.pop_front();
+                std::unique_lock<std::mutex> lk(me.mutex);
+                me.condition.wait(lk, [&] {
+                    return stop.load(std::memory_order_acquire) || !me.tasks.empty();
+                });
+
+                if (stop.load(std::memory_order_relaxed) && me.tasks.empty()) {
+                    break; // porządne wyjście
                 }
-            }
-            if (task) {
-                task();
-                continue;
-            }
 
-            const auto n = static_cast<unsigned>(this->workers.size());
-            const unsigned start = rng() % n;
-
-            for (unsigned i = 0; i < n; ++i) {
-                const unsigned vic = (start + i) % n;
-                if (vic == id) continue;
-
-                std::lock_guard<std::mutex> lock(this->workers[vic]->mutex);
-                if (!this->workers[vic]->tasks.empty()) {
-                    task = std::move(this->workers[vic]->tasks.back());
-                    this->workers[vic]->tasks.pop_back();
-                    break;
+                if (!me.tasks.empty()) {
+                    job = std::move(me.tasks.front());
+                    me.tasks.pop_front();
+                } else {
+                    job = nullptr;
                 }
             }
 
-            if (task) {
-                task();
+            if (job) {
+                job();
+                job = nullptr;
                 continue;
             }
 
-            {
-                std::unique_lock<std::mutex> lock(worker->mutex);
-                // worker->condition.wait_for(lock, std::chrono::milliseconds(50), [&] {
-                //     return this->stop.load(std::memory_order_relaxed) || !worker->tasks.empty();
-                // });
-                worker->condition.wait(lock, [&] { return stop || !worker->tasks.empty(); });
+            if (size() > 1) {
+                for (unsigned tries = 0; tries < workers.size(); ++tries) {
+                    unsigned victim = dist(rng);
+                    if (victim == self) continue;
+                    auto &w = *workers[victim];
+
+                    if (w.mutex.try_lock()) {
+                        if (!w.tasks.empty()) {
+                            job = std::move(w.tasks.back()); // kradniemy z końca
+                            w.tasks.pop_back();
+                            w.mutex.unlock();
+                            job();
+                            job = nullptr;
+                            break;
+                        }
+                        w.mutex.unlock();
+                    }
+                }
             }
         }
     }
 
-private:
     std::vector<std::unique_ptr<Worker> > workers;
-
-    std::atomic<bool> stop{};
-    std::atomic<unsigned> roundRobin{};
+    std::atomic<bool> stop;
+    std::atomic<unsigned> roundRobin;
 };

@@ -5,16 +5,26 @@
 #include "../../MoveGenerator/MoveExecutor/MoveExecutor.hpp"
 #include "../../MoveGenerator/PseudoLegalMovesGenerator/PseudoLegalMovesGenerator.hpp"
 #include "../Evaluation/Evaluation.hpp"
+#include "../TranspositionTable/TranspositionTable.hpp"
+#include "../TranspositionTable/Zobrist.hpp"
 
 class QuickSearch {
 public:
-    static int search(const unique_ptr<Board> &board, int alpha, const int beta) {
+    static int search(
+        const unique_ptr<Board> &board,
+        int alpha,
+        const int beta,
+        const int ply
+    ) {
         const auto us = board->side;
+        const int alpha0 = alpha;
+
+        int best = Evaluation::NEG_INF;
+        Move::Move bestMove = 0;
 
         if (MoveExecutor::isCheck(board, us)) {
             auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
             bool found = false;
-            int best = Evaluation::NEG_INF;
 
             for (const auto &move: m) {
                 auto child = MoveExecutor::executeMove(board, move);
@@ -25,8 +35,11 @@ public:
 
                 found = true;
 
-                const int score = -search(child, -beta, -alpha);
-                if (score > best) { best = score; }
+                const int score = -search(child, -beta, -alpha, ply + 1);
+                if (score > best) {
+                    best = score;
+                    bestMove = move;
+                }
                 if (score > alpha) {
                     alpha = score;
                     if (alpha >= beta) {
@@ -36,7 +49,7 @@ public:
             }
 
             if (!found) {
-                return Evaluation::MATE;
+                return Evaluation::MATE - ply;
             }
             return alpha;
         }
@@ -46,31 +59,32 @@ public:
         if (stand >= beta) { return stand; }
         if (stand > alpha) { alpha = stand; }
 
-        Move::MoveList captures;
-        captures.m.reserve(32);
-
-        generateCaptures(board, captures);
-
-        for (const auto &move: captures.m) {
-            const auto child = MoveExecutor::executeMove(board, move);
-
-            if (MoveExecutor::isCheck(child, us)) {
-                continue;
-            }
-
-            const int score = -search(child, -beta, -alpha);
-            if (score > alpha) {
-                alpha = score;
-                if (alpha >= beta) {
-                    return alpha;
-                }
-            }
-        }
+        // Move::MoveList captures;
+        // captures.m.reserve(32);
+        //
+        // generateCaptures(board, captures);
+        //
+        // for (const auto &move: captures.m) {
+        //     const auto child = MoveExecutor::executeMove(board, move);
+        //
+        //     if (MoveExecutor::isCheck(child, us)) {
+        //         continue;
+        //     }
+        //
+        //     const int score = search(child, -beta, -alpha, ply + 1);
+        //     if (score > alpha) {
+        //         alpha = score;
+        //         bestMove = move;
+        //         if (alpha >= beta) {
+        //             return alpha;
+        //         }
+        //     }
+        // }
 
         return alpha;
     }
 
-private:
+public:
     static int getPieceValue(const PieceType &type) {
         switch (type) {
             case PieceType::PAWN: return Evaluation::VALUE_PAWN;

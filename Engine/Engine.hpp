@@ -6,6 +6,8 @@
 #include "Evaluation/Evaluation.hpp"
 #include "PvSplit/PvSplit.hpp"
 #include "ThreadPool/ThreadPool.hpp"
+#include "TranspositionTable/TranspositionTable.hpp"
+#include "TranspositionTable/Zobrist.hpp"
 #include "Utils/SearchConfig.hpp"
 
 struct RootResult {
@@ -20,54 +22,51 @@ public:
         ThreadPool pool(config.threads);
         RootResult result{0, 0};
 
-        int alpha = Evaluation::MATE;
-        int beta = -Evaluation::MATE;
+        int alpha = Evaluation::NEG_INF;
+        int beta = Evaluation::INF;
+        TranspositionTable tt{1u << 24};
+        Zobrist zob{0xDEADBEEF};
 
-        for (int depth = 1; depth < config.maxDepth; ++depth) {
-            int a = alpha;
-            const int b = beta;
+        tt.newSearchIteration();
 
-            const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
-            if (m.empty()) break;
 
-            const auto us = board->side;
-            int bestScore = Evaluation::MATE;
-            Move::Move bestMove = m[0];
+        auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
+        if (m.empty()) {
+            result = {alpha, 0};
+            return result;
+        };
 
-            {
-                const auto child = MoveExecutor::executeMove(board, m[0]);
-                if (!MoveExecutor::isCheck(child, us)) {
-                    bestScore = -PvSplit::searchPvSplit(pool, config, child, -b, -a, depth - 1, 1);
-                    if (bestScore > a) {
-                        a = bestScore;
-                        bestMove = m[0];
-                    }
-                }
+        const auto us = board->side;
+        Move::Move bestMove = m[0];
+
+        for (size_t i = 0; i < m.size(); i++) {
+            const auto child = MoveExecutor::executeMove(board, m[i]);
+            if (MoveExecutor::isCheck(child, us)) {
+                continue;
             }
 
-            for (size_t i = 1; i < m.size(); ++i) {
-                const auto child = MoveExecutor::executeMove(board, m[i]);
-                if (MoveExecutor::isCheck(child, us)) {
-                    continue;
-                }
+            const int score = -PvSplit::searchPvSplit(
+                pool,
+                config,
+                child,
+                -beta,
+                -alpha,
+                config.maxDepth - 1,
+                10,
+                tt,
+                zob
+            );
 
-                int score = -PvSplit::searchPvSplit(pool, config, child, -(a + 1), -a, depth - 1, 1);
-
-                if (score > a && score < b) {
-                    score = -PvSplit::searchPvSplit(pool, config, child, -b, -a, depth - 1, 1);
-                }
-
-                if (score > a) {
-                    a = score;
-                    bestMove = m[i];
-                }
+            if (score > alpha) {
+                alpha = score;
+                bestMove = m[i];
             }
 
-            result = {a, bestMove};
-            alpha = a - 50;
-            beta = a + 50;
+            Bitboards::print_bb(child->occupancyAll);
+            std::cout << "Alpha: " << alpha << "  Score: " << score << std::endl;
         }
 
+        result = {alpha, bestMove};
         return result;
     }
 };

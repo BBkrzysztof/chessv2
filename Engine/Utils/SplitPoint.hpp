@@ -27,5 +27,6 @@ struct SplitPoint {
                const bool pvNode, const std::vector<Move::Move> &moves)
         : alpha(alpha), beta(beta), bestScore(Evaluation::NEG_INF), bestMove(0),
           depth(depth), ply(ply), pvNode(pvNode), parent(parent), moves(moves) {
+        std::cout << "SplitPoint::SplitPoint()" << std::endl;
     }
 };
