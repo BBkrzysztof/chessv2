@@ -120,7 +120,7 @@ private:
             while (bb) {
                 const uint8_t position = __builtin_ctzll(bb);
                 score += (color == PieceColor::WHITE
-                              ? +getPieceSquareValue(pst, position, color)
+                              ? getPieceSquareValue(pst, position, color)
                               : -getPieceSquareValue(pst, position, color));
                 bb &=(bb - 1);
             }

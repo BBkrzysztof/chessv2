@@ -73,16 +73,17 @@ public:
 
         const PieceColor side = board.side;
 
+        getQueenMoves(side, board, moves);
+        getRookMoves(side, board, moves);
+        getBishopMoves(side, board, moves);
+        getKnightMoves(side, board, moves);
+
         if (side == PieceColor::WHITE) {
             getWhitePawnMoves(board, moves);
         } else {
             getBlackPawnMoves(board, moves);
         }
 
-        getKnightMoves(side, board, moves);
-        getBishopMoves(side, board, moves);
-        getRookMoves(side, board, moves);
-        getQueenMoves(side, board, moves);
         getKingMovesWithoutCastle(side, board, moves);
 
         getCastles(side, board, moves);

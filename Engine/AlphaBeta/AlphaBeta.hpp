@@ -7,7 +7,7 @@
 
 class AlphaBeta {
 public:
-    static int search(const Board& board, int depth, int alpha, int beta) {
+    static int search(const Board& board, const int depth, int alpha, const int beta) {
         if (depth == 0) {
             return Evaluation::evaluate(board);
         }
@@ -24,10 +24,6 @@ public:
             }
 
             const auto score = -search(newPosition, depth - 1, -beta, -alpha);
-            if (depth == 6) {
-                Bitboards::print_bb(newPosition.occupancyAll);
-                std::cout << "\n score: " << score << std::endl << std::endl;
-            }
 
             if (score >= beta) {
                 return beta;
