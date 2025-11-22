@@ -27,7 +27,7 @@ int main() {
 
     const auto res = AlphaBeta::search(
             board,
-            6,
+            8,
             Evaluation::NEG_INF,
             Evaluation::INF
     );

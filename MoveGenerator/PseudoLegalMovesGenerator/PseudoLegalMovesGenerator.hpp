@@ -92,12 +92,56 @@ public:
 
 
     static bool isSquareAttackedBy(
-        const uint8_t &position,
+        const uint8_t position,
         const PieceColor color,
         const Board &board
     ) {
-        const BitBoard attacks = getFieldsAttackedByColor(color, board);
-        return (attacks & Bitboards::bit(position)) != 0;
+        const BitBoard occ = board.occupancyAll;
+
+        const BitBoard enemyPawns = board.pieces[color][PieceType::PAWN];
+        const BitBoard enemyKnights = board.pieces[color][PieceType::KNIGHT];
+        const BitBoard enemyBishops = board.pieces[color][PieceType::BISHOP];
+        const BitBoard enemyRooks = board.pieces[color][PieceType::ROOK];
+        const BitBoard enemyQueens = board.pieces[color][PieceType::QUEEN];
+        const BitBoard enemyKing = board.pieces[color][PieceType::KING];
+
+        const BitBoard sqBB = 1ULL << position;
+
+        if (color == PieceColor::WHITE) {
+            const BitBoard sources =
+                    ((sqBB >> 7) & ~Bitboards::FILE_H) |
+                    ((sqBB >> 9) & ~Bitboards::FILE_A);
+            if (enemyPawns & sources) return true;
+        } else {
+            const BitBoard sources =
+                    ((sqBB << 7) & ~Bitboards::FILE_A) |
+                    ((sqBB << 9) & ~Bitboards::FILE_H);
+            if (enemyPawns & sources) return true;
+        }
+
+        if (enemyKnights & preComputedMoves.knight[position]) return true;
+
+        if (enemyKing & preComputedMoves.king[position]) return true;
+
+        {
+            const BitBoard mask = preComputedMoves.bishopMask[position];
+            const BitBoard relevant = mask & occ;
+            const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
+            const BitBoard attacksFromSq = preComputedMoves.bishop[position][idx];
+
+            if (attacksFromSq & (enemyBishops | enemyQueens)) return true;
+        }
+
+        {
+            const BitBoard mask = preComputedMoves.rookMask[position];
+            const BitBoard relevant = mask & occ;
+            const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
+            const BitBoard attacksFromSq = preComputedMoves.rook[position][idx];
+
+            if (attacksFromSq & (enemyRooks | enemyQueens)) return true;
+        }
+
+        return false;
     }
 
 private:
