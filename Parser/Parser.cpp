@@ -8,9 +8,9 @@
 
 class Parser {
 public:
-    static std::unique_ptr<Board> loadFen(const std::string_view fen) {
+    static Board loadFen(const std::string_view fen) {
         using namespace std::literals;
-        auto board = std::make_unique<Board>();
+        Board board;
 
 
         // 1) Podziel na 6 pól FEN
@@ -29,7 +29,7 @@ public:
 
         // 3) Piece placement
         {
-            const auto &pp = fields[0];
+            const auto& pp = fields[0];
             int row = 7, col = 0; // zaczynamy od rank 8 (row=7), do 1 (row=0)
             for (size_t i = 0; i < pp.size(); ++i) {
                 char c = pp[i];
@@ -48,7 +48,7 @@ public:
                 fenCharToPieceTypeAndColor(c, pieceColor, pieceType);
 
                 const auto sq = static_cast<uint8_t>(row * 8 + col);
-                board->setPiece(pieceColor, pieceType, sq);
+                board.setPiece(pieceColor, pieceType, sq);
                 ++col;
             }
         }
@@ -56,26 +56,30 @@ public:
         // 4) Side to move
         {
             char c = fields[1][0];
-            if (c == 'w') board->side = PieceColor::WHITE;
-            else if (c == 'b') board->side = PieceColor::BLACK;
+            if (c == 'w') board.side = PieceColor::WHITE;
+            else if (c == 'b') board.side = PieceColor::BLACK;
         }
 
         // 5) Castling rights
         {
-            board->castle = 0;
+            board.castle = 0;
             auto cs = fields[2];
             if (cs == "-"sv) {
                 // brak praw
             } else {
-                for (const char &c: cs) {
+                for (const char& c: cs) {
                     switch (c) {
-                        case 'K': board->castle |= 1;
+                        case 'K':
+                            board.castle |= 1;
                             break; // white short
-                        case 'Q': board->castle |= 2;
+                        case 'Q':
+                            board.castle |= 2;
                             break; // white long
-                        case 'k': board->castle |= 4;
+                        case 'k':
+                            board.castle |= 4;
                             break; // black short
-                        case 'q': board->castle |= 8;
+                        case 'q':
+                            board.castle |= 8;
                             break; // black long
                     }
                 }
@@ -84,29 +88,29 @@ public:
 
         // 6) En passant
         {
-            board->ep = parseEpSquare(fields[3]);
+            board.ep = parseEpSquare(fields[3]);
         }
 
         // 7) Opcjonalne halfmove/fullmove
         if (!fields[4].empty()) {
-            parseUint(fields[4], board->halfMove);
-        } else board->halfMove = 0;
+            parseUint(fields[4], board.halfMove);
+        } else board.halfMove = 0;
 
         if (!fields[5].empty()) {
-            parseUint(fields[5], board->fullMove);
-            if (board->fullMove < 1) board->fullMove = 1;
-        } else board->fullMove = 1;
+            parseUint(fields[5], board.fullMove);
+            if (board.fullMove < 1) board.fullMove = 1;
+        } else board.fullMove = 1;
 
         return board;
     }
 
 private:
-    static int fileCharToCol(const char &f) {
+    static int fileCharToCol(const char& f) {
         if (f < 'a' || f > 'h') return -1;
         return static_cast<int>(f - 'a');
     }
 
-    static int rankCharToRow(const char &r) {
+    static int rankCharToRow(const char& r) {
         if (r < '1' || r > '8') return -1;
         return static_cast<int>(r - '1');
     }
@@ -121,7 +125,7 @@ private:
         return row * 8 + col;
     }
 
-    static void parseUint(const std::string_view tok, int &out) {
+    static void parseUint(const std::string_view tok, int& out) {
         int v = 0;
         for (char c: tok) {
             v = v * 10 + (c - '0');
@@ -130,50 +134,63 @@ private:
     }
 
     static void fenCharToPieceTypeAndColor(
-        const char &c,
-        PieceColor &col,
-        PieceType &pc
+            const char& c,
+            PieceColor& col,
+            PieceType& pc
     ) {
         switch (c) {
             // białe
-            case 'P': col = PieceColor::WHITE;
+            case 'P':
+                col = PieceColor::WHITE;
                 pc = PieceType::PAWN;
                 break;
-            case 'N': col = PieceColor::WHITE;
+            case 'N':
+                col = PieceColor::WHITE;
                 pc = PieceType::KNIGHT;
                 break;
-            case 'B': col = PieceColor::WHITE;
+            case 'B':
+                col = PieceColor::WHITE;
                 pc = PieceType::BISHOP;
                 break;
-            case 'R': col = PieceColor::WHITE;
+            case 'R':
+                col = PieceColor::WHITE;
                 pc = PieceType::ROOK;
                 break;
-            case 'Q': col = PieceColor::WHITE;
+            case 'Q':
+                col = PieceColor::WHITE;
                 pc = PieceType::QUEEN;
                 break;
-            case 'K': col = PieceColor::WHITE;
+            case 'K':
+                col = PieceColor::WHITE;
                 pc = PieceType::KING;
                 break;
-            // czarne
-            case 'p': col = PieceColor::BLACK;
+                // czarne
+            case 'p':
+                col = PieceColor::BLACK;
                 pc = PieceType::PAWN;
                 break;
-            case 'n': col = PieceColor::BLACK;
+            case 'n':
+                col = PieceColor::BLACK;
                 pc = PieceType::KNIGHT;
                 break;
-            case 'b': col = PieceColor::BLACK;
+            case 'b':
+                col = PieceColor::BLACK;
                 pc = PieceType::BISHOP;
                 break;
-            case 'r': col = PieceColor::BLACK;
+            case 'r':
+                col = PieceColor::BLACK;
                 pc = PieceType::ROOK;
                 break;
-            case 'q': col = PieceColor::BLACK;
+            case 'q':
+                col = PieceColor::BLACK;
                 pc = PieceType::QUEEN;
                 break;
-            case 'k': col = PieceColor::BLACK;
+            case 'k':
+                col = PieceColor::BLACK;
                 pc = PieceType::KING;
                 break;
-            default: break;
+            default:
+                break;
         }
     }
 };
