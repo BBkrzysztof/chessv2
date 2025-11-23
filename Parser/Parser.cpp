@@ -1,9 +1,9 @@
 #pragma once
 
 #include <string>
-#include <sstream>
 
 #include "../Board/Board.hpp"
+#include "../Board/Zobrist.hpp"
 
 
 class Parser {
@@ -29,7 +29,7 @@ public:
 
         // 3) Piece placement
         {
-            const auto& pp = fields[0];
+            const auto &pp = fields[0];
             int row = 7, col = 0; // zaczynamy od rank 8 (row=7), do 1 (row=0)
             for (size_t i = 0; i < pp.size(); ++i) {
                 char c = pp[i];
@@ -67,7 +67,7 @@ public:
             if (cs == "-"sv) {
                 // brak praw
             } else {
-                for (const char& c: cs) {
+                for (const char &c: cs) {
                     switch (c) {
                         case 'K':
                             board.castle |= 1;
@@ -101,16 +101,18 @@ public:
             if (board.fullMove < 1) board.fullMove = 1;
         } else board.fullMove = 1;
 
+        board.zobrist = Zobrist::instance().computeKey(board);
+
         return board;
     }
 
 private:
-    static int fileCharToCol(const char& f) {
+    static int fileCharToCol(const char &f) {
         if (f < 'a' || f > 'h') return -1;
         return static_cast<int>(f - 'a');
     }
 
-    static int rankCharToRow(const char& r) {
+    static int rankCharToRow(const char &r) {
         if (r < '1' || r > '8') return -1;
         return static_cast<int>(r - '1');
     }
@@ -125,7 +127,7 @@ private:
         return row * 8 + col;
     }
 
-    static void parseUint(const std::string_view tok, int& out) {
+    static void parseUint(const std::string_view tok, int &out) {
         int v = 0;
         for (char c: tok) {
             v = v * 10 + (c - '0');
@@ -134,9 +136,9 @@ private:
     }
 
     static void fenCharToPieceTypeAndColor(
-            const char& c,
-            PieceColor& col,
-            PieceType& pc
+        const char &c,
+        PieceColor &col,
+        PieceType &pc
     ) {
         switch (c) {
             // białe
@@ -164,7 +166,7 @@ private:
                 col = PieceColor::WHITE;
                 pc = PieceType::KING;
                 break;
-                // czarne
+            // czarne
             case 'p':
                 col = PieceColor::BLACK;
                 pc = PieceType::PAWN;

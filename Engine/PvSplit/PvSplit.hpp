@@ -6,7 +6,7 @@
 #include "../QuickSearch/QuickSearch.hpp"
 #include "../Utils/SearchConfig.hpp"
 #include "../TranspositionTable/TranspositionTable.hpp"
-#include "../TranspositionTable/Zobrist.hpp"
+#include "../../Board/Zobrist.hpp"
 
 class PvSplit {
 public:

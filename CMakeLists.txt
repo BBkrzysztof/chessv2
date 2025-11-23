@@ -29,7 +29,7 @@ add_executable(chess
         Engine/PvSearch/PvSearch.hpp
         Engine/Engine.hpp
         Engine/TranspositionTable/TranspositionTable.hpp
-        Engine/TranspositionTable/Zobrist.hpp
+        Board/Zobrist.hpp
         Engine/AlphaBeta/AlphaBeta.hpp)
 
 FetchContent_Declare(

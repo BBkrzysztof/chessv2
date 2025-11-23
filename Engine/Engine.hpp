@@ -8,7 +8,7 @@
 #include "PvSplit/PvSplit.hpp"
 #include "ThreadPool/ThreadPool.hpp"
 #include "TranspositionTable/TranspositionTable.hpp"
-#include "TranspositionTable/Zobrist.hpp"
+#include "../Board/Zobrist.hpp"
 #include "Utils/SearchConfig.hpp"
 
 struct RootResult {
