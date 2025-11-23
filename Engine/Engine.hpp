@@ -20,6 +20,7 @@ struct RootResult {
 class Engine {
 public:
     static RootResult run(const Board &board, const SearchConfig &config) {
+        ThreadPool pool(config.threads);
         RootResult result{0, 0};
 
         const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
@@ -34,7 +35,7 @@ public:
                 continue;
             }
 
-            const auto score = AlphaBeta::search(child, config.maxDepth - 1, alpha, beta);
+            const auto score = PvSplit::searchPvSplit(pool, config, child, alpha, beta, config.maxDepth - 1, 1);
 
             if (score > beta) {
                 return {beta, move};

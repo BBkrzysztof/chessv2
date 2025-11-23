@@ -2,6 +2,10 @@
 // #include <memory>
 //
 // #include "../../Board/Board.hpp"
+// #include "../../MoveGenerator/MoveExecutor/MoveExecutor.hpp"
+// #include "../../MoveGenerator/PseudoLegalMovesGenerator/PseudoLegalMovesGenerator.hpp"
+// #include "../AlphaBeta/AlphaBeta.hpp"
+// #include "../Evaluation/Evaluation.hpp"
 // #include "../QuickSearch/QuickSearch.hpp"
 // #include "../TranspositionTable/TranspositionTable.hpp"
 // #include "../TranspositionTable/Zobrist.hpp"
@@ -9,86 +13,34 @@
 // class PvSearch {
 // public:
 //     static int search(
-//         const std::unique_ptr<Board> &board,
+//         const Board &board,
 //         int alpha,
 //         const int beta,
 //         const int &depth,
-//         const int ply,
-//         TranspositionTable &tt,
-//         const Zobrist &zob
+//         const int ply
 //     ) {
-//         if (depth == 1) return -QuickSearch::search(board, alpha, beta, ply);
-//         const auto us = board->side;
-//
-//         const int alpha0 = alpha;
-//
-//         // === TT PROBE (przed generacją ruchów) ===
-//         const uint64_t key = zob.computeKey(*board);
-//         {
-//             auto hit = tt.probe(key, depth);
-//             if (hit.hit) {
-//                 const int tts = Evaluation::from_tt_score(hit.score, ply);
-//                 if (hit.flag == TTFlag::EXACT) {
-//                     return tts;
-//                 }
-//                 if (hit.flag == TTFlag::LOWER && tts >= beta) {
-//                     return tts;
-//                 }
-//                 if (hit.flag == TTFlag::UPPER && tts <= alpha) {
-//                     return tts;
-//                 }
-//             }
+//         if (depth == 0) {
+//             return Evaluation::evaluate(board);
 //         }
 //
 //
 //         const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
-//         if (m.empty()) {
-//             if (MoveExecutor::isCheck(board, us)) {
-//                 return -Evaluation::MATE + ply;
-//             }
-//             return 0;
+//         const auto firstMove = m[0];
+//
+//         auto firstChild = MoveExecutor::executeMove(board, firstMove);
+//         const auto score = -search(firstChild, -beta, -alpha, depth - 1, ply + 1);
+//
+//         if (score > beta) {
+//             return beta;
+//         }
+//         if (score > alpha) {
+//             alpha = score;
 //         }
 //
-//         int best = Evaluation::NEG_INF;
-//         Move::Move bestMove = 0;
-//         bool foundLegal = false;
+//         const auto canSplit = depth
 //
-//         for (size_t i = 0; i < m.size(); i++) {
-//             auto move = m[i];
-//             const auto child = MoveExecutor::executeMove(board, move);
-//             if (MoveExecutor::isCheck(child, us)) {
-//                 continue;
-//             }
-//
-//             foundLegal = true;
-//             const int score = -search(child, -beta, -alpha, depth - 1, ply + 1, tt, zob);
-//
-//             if (score > best) {
-//                 best = score;
-//                 bestMove = move;
-//             }
-//
-//             if (score > alpha) {
-//                 alpha = score;
-//                 if (alpha >= beta) {
-//                     break;
-//                 }
-//             }
+//         for (int i = 1; i < m.size(); i++) {
 //         }
-//
-//         if (!foundLegal) {
-//             if (MoveExecutor::isCheck(board, us)) {
-//                 return Evaluation::MATE - (ply * 10);
-//             }
-//             return 0;
-//         }
-//
-//         auto flag = TTFlag::EXACT;
-//         if (best <= alpha0) flag = TTFlag::UPPER;
-//         else if (best >= beta) flag = TTFlag::LOWER;
-//         const int stored = Evaluation::to_tt_score(best, ply);
-//         const auto packedMove = bestMove;
-//         tt.store(key, static_cast<uint8_t>(depth), stored, flag, packedMove);
 //
 //         return alpha;
 //     }

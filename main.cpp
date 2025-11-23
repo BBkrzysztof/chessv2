@@ -17,10 +17,10 @@ int main() {
 
 
     SearchConfig lim;
-    lim.maxDepth = 10;
-    lim.threads = 0; // std::thread::hardware_concurrency();
-    lim.splitMinDepth = 0;
-    lim.splitMinMoves = 0;
+    lim.maxDepth = 8;
+    lim.threads = 4; // std::thread::hardware_concurrency();
+    lim.splitMinDepth = 8;
+    lim.splitMinMoves = 16;
 
     auto [score, bestMove] = Engine::run(board, lim);
 
