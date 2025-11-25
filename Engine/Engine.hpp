@@ -19,7 +19,11 @@ struct RootResult {
 
 class Engine {
 public:
-    static RootResult run(const Board &board, const SearchConfig &config) {
+    static RootResult run(
+        const Board &board,
+        const SearchConfig &config,
+        TranspositionTable &table
+    ) {
         ThreadPool pool(config.threads);
         RootResult result{0, 0};
 
@@ -35,7 +39,7 @@ public:
                 continue;
             }
 
-            const auto score = PvSplit::searchPvSplit(pool, config, child, alpha, beta, config.maxDepth - 1, 1);
+            const auto score = PvSplit::searchPvSplit(pool, config, child, table, alpha, beta, config.maxDepth - 1, 1);
 
             if (score > beta) {
                 return {beta, move};

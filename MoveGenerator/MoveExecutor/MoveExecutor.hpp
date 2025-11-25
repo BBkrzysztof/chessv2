@@ -99,7 +99,7 @@ public:
         return newBoard;
     }
 
-    static bool isCheck(Board &board, const PieceColor &us) {
+    static bool isCheck(const Board &board, const PieceColor &us) {
         const auto enemyColor = opponentColor(us);
         const auto kingPosition = board.kingSq[us];
 
@@ -109,7 +109,6 @@ public:
             board
         );
 
-        board.isCheck = isCheck;
         return isCheck;
     }
 };

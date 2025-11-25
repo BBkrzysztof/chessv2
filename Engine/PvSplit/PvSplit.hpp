@@ -6,7 +6,6 @@
 #include "../QuickSearch/QuickSearch.hpp"
 #include "../Utils/SearchConfig.hpp"
 #include "../TranspositionTable/TranspositionTable.hpp"
-#include "../../Board/Zobrist.hpp"
 
 class PvSplit {
 public:
@@ -14,6 +13,7 @@ public:
         ThreadPool &pool,
         const SearchConfig &config,
         const Board &board,
+        TranspositionTable &table,
         int alpha,
         const int beta,
         const int depth,
@@ -24,15 +24,21 @@ public:
         }
 
         int best = Evaluation::NEG_INF;
+        const int alpha0 = alpha;
         Move::Move bestMove = 0;
+
+        if (auto pr = table.probe(board.zobrist, depth, ply, alpha, beta); pr.hit) {
+            if (pr.flag == TTFlag::EXACT) return pr.score;
+            if (pr.flag == TTFlag::LOWER && pr.score >= beta) return pr.score;
+            if (pr.flag == TTFlag::UPPER && pr.score <= alpha) return pr.score;
+        }
 
         const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
         const auto firstMove = m[0];
 
         auto firstChild = MoveExecutor::executeMove(board, firstMove);
-
-        const auto score = -searchPvSplit(pool, config, firstChild, -beta, -alpha, depth - 1, ply + 1);
         if (!MoveExecutor::isCheck(firstChild, board.side)) {
+            const auto score = -searchPvSplit(pool, config, firstChild, table, -beta, -alpha, depth - 1, ply + 1);
             if (score > best) {
                 best = score;
                 bestMove = firstMove;
@@ -40,11 +46,13 @@ public:
             if (best > alpha) {
                 alpha = score;
                 if (alpha >= beta) {
+                    table.store(board.zobrist, depth, beta, TTFlag::LOWER, bestMove, ply);
                     return alpha;
                 }
             }
         }
-        const auto canSplit = depth <= (config.maxDepth - config.splitMinDepth) && m.size() >= config.splitMinMoves;
+
+        const auto canSplit = ply >=  config.splitMinDepth;
         if (!canSplit) {
             for (int i = 1; i < m.size(); i++) {
                 auto child = MoveExecutor::executeMove(board, m[i]);
@@ -52,7 +60,7 @@ public:
                     continue;
                 }
 
-                auto sc = -AlphaBeta::search(child, depth - 1, -beta, -alpha);
+                auto sc = -AlphaBeta::search(child, table, depth - 1, -beta, -alpha, ply + 1);
                 if (sc > best) {
                     best = sc;
                     bestMove = m[i];
@@ -60,11 +68,20 @@ public:
                 if (sc > alpha) {
                     alpha = sc;
                     if (alpha >= beta) {
+                        table.store(board.zobrist, depth, beta, TTFlag::LOWER, bestMove, ply);
                         return alpha;
                     }
                 }
             }
 
+            TTFlag flag;
+            if (alpha <= alpha0) {
+                flag = TTFlag::UPPER;
+            } else {
+                flag = TTFlag::EXACT;
+            }
+
+            table.store(board.zobrist, depth, alpha, flag, bestMove, ply);
             return alpha;
         }
 
@@ -81,31 +98,45 @@ public:
         std::condition_variable doneCv;
 
         for (unsigned int i = 0; i < toSpawn; i++) {
-            pool.submit([&pool, &doneMutex, &ply, &sp, &doneCv]() {
-                workerConsumeSplitPoint(pool, sp, ply, doneMutex, doneCv);
+            pool.submit([&table, &doneMutex, ply, &sp, &doneCv]() {
+                workerConsumeSplitPoint(table, sp, ply, doneMutex, doneCv);
             });
         }
 
-        workerConsumeSplitPoint(pool, sp, ply, doneMutex, doneCv);
+        workerConsumeSplitPoint(table, sp, ply, doneMutex, doneCv);
 
-        // bariera: czekamy aż wszyscy skończą
         {
             std::unique_lock<std::mutex> lk(doneMutex);
-            doneCv.wait(lk, [&] { return sp.active.load(std::memory_order_acquire) == 0; });
+            doneCv.wait(lk, [&] {
+                return sp.active.load(std::memory_order_acquire) == 0;
+            });
         }
 
         const int a = sp.alpha.load(std::memory_order_relaxed);
         const int bst = sp.bestScore.load(std::memory_order_relaxed);
         const int finalBest = std::max(a, bst);
 
+        if (finalBest >= beta) {
+            table.store(board.zobrist, depth, beta, TTFlag::LOWER, sp.bestMove, ply);
+            return beta;
+        }
+
+        TTFlag flag;
+        if (finalBest <= alpha0) {
+            flag = TTFlag::UPPER;
+        } else {
+            flag = TTFlag::EXACT;
+        }
+
+        table.store(board.zobrist, depth, finalBest, flag, sp.bestMove, ply);
         return finalBest;
     }
 
 private:
     static void workerConsumeSplitPoint(
-        ThreadPool &pool,
+        TranspositionTable &table,
         SplitPoint &sp,
-        const int &ply,
+        const int ply,
         std::mutex &doneMutex,
         std::condition_variable &doneCv
     ) {
@@ -114,13 +145,14 @@ private:
             if (i >= static_cast<int>(sp.moves.size())) break;
 
             const Move::Move move = sp.moves[i];
+            const auto us = sp.parent.side;
             auto child = MoveExecutor::executeMove(sp.parent, move);
-            if (MoveExecutor::isCheck(child, sp.parent.side)) continue;
+            if (MoveExecutor::isCheck(child, us)) continue;
 
             const int a = sp.alpha.load(std::memory_order_acquire);
             const int b = sp.beta;
 
-            const int sc = -AlphaBeta::search(child, sp.depth, -b, -a);
+            const int sc = -AlphaBeta::search(child, table, sp.depth - 1, -b, -a, ply + 1);
 
             // CAS na α + best; cutoff na >= beta
             int prev = sp.alpha.load(std::memory_order_acquire);
@@ -131,7 +163,6 @@ private:
                     std::memory_order_acquire // porażka
                 )) {
                     sp.bestScore.store(sc, std::memory_order_release);
-                    sp.alpha.store(sc, std::memory_order_release);
                     sp.bestMove = move;
                     if (sc >= sp.beta) {
                         sp.abort.store(true, std::memory_order_release);

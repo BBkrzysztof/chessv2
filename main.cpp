@@ -18,13 +18,15 @@ int main() {
 
     SearchConfig lim;
     lim.maxDepth = 8;
-    lim.threads = 4; // std::thread::hardware_concurrency();
-    lim.splitMinDepth = 8;
-    lim.splitMinMoves = 16;
+    lim.threads = std::thread::hardware_concurrency();
+    lim.splitMinDepth = 6;
+    lim.splitMinMoves = 0;
 
-    auto [score, bestMove] = Engine::run(board, lim);
+    TranspositionTable table{256};
 
-    cout << score<<" "<< (int) Move::moveFrom(bestMove) << " " << (int) Move::moveTo(bestMove) << endl;
+    auto [score, bestMove] = Engine::run(board, lim, table);
+
+    cout << score << " " << (int) Move::moveFrom(bestMove) << " " << (int) Move::moveTo(bestMove) << endl;
 
 
     return 0;

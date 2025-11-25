@@ -1,15 +1,9 @@
 #pragma once
 
 #include <atomic>
-#include <cstdint>
 #include <memory>
-#include <vector>
-#include <optional>
 #include <cstring>
-#include <cassert>
-
-// Typ pomocniczy
-using PackedMove = uint16_t;
+#include "../Evaluation/Evaluation.hpp"
 
 enum class TTFlag : uint8_t {
     NONE = 0,
@@ -18,137 +12,190 @@ enum class TTFlag : uint8_t {
     UPPER = 3
 };
 
-struct TTProbeResult {
-    bool hit = false;
-    int32_t score = 0;
-    uint8_t depth = 0;
-    TTFlag flag = TTFlag::NONE;
-    PackedMove move = 0;
-};
 
 class TranspositionTable {
 public:
-    explicit TranspositionTable(size_t sizeEntries = (1<<20)) {
-        assert((sizeEntries & (sizeEntries - 1)) == 0 && "sizeEntries must be power of two");
-        size = sizeEntries;
-        mask = size - 1;
+    static constexpr size_t BUCKET_SIZE = 4;
 
-        // allocate atomic arrays (przenośne; std::vector<std::atomic<...>> powoduje problems)
-        keys = std::make_unique<std::atomic<uint64_t>[]>(size);
-        values = std::make_unique<std::atomic<uint64_t>[]>(size);
+    struct TTProbeResult {
+        bool hit = false;
+        int32_t score = 0;
+        uint8_t depth = 0;
+        TTFlag flag = TTFlag::NONE;
+        Move::Move move = 0;
+    };
 
-        for (size_t i = 0; i < size; ++i) {
-            keys[i].store(0, std::memory_order_relaxed);
-            values[i].store(0, std::memory_order_relaxed);
+    TranspositionTable() = default;
+
+    explicit TranspositionTable(const size_t capacity_mb) { resizeMb(capacity_mb); }
+
+    void resizeMb(size_t mb) {
+        if (mb < 1) mb = 1;
+        const size_t bytes = mb * 1024ull * 1024ull;
+
+        const size_t bucketsSize = bytes / (BUCKET_SIZE * sizeof(uint64_t));
+        size_t pow2 = 1;
+        while (pow2 < bucketsSize) pow2 <<= 1;
+        this->buckets = std::max<size_t>(pow2, 256);
+
+        entries = std::make_unique<std::atomic<uint64_t>[]>(this->buckets * BUCKET_SIZE);
+        for (size_t i = 0; i < this->buckets * BUCKET_SIZE; ++i) {
+            entries[i].store(0, std::memory_order_relaxed);
         }
-        currentAge = 0;
+        generation.store(1, std::memory_order_relaxed);
     }
 
     void clear() {
-        for (size_t i = 0; i < size; ++i) {
-            keys[i].store(0, std::memory_order_relaxed);
-            values[i].store(0, std::memory_order_relaxed);
+        if (!entries) return;
+        for (size_t i = 0; i < this->buckets * BUCKET_SIZE; ++i)
+            entries[i].store(0, std::memory_order_relaxed);
+        generation.store(1, std::memory_order_relaxed);
+    }
+
+    void newSearch() {
+        const uint8_t gen = this->generation.load(std::memory_order_relaxed);
+        this->generation.store(static_cast<uint8_t>((gen + 1) & 0x3F), std::memory_order_relaxed);
+    }
+
+    TTProbeResult probe(
+        const BitBoard key,
+        const uint8_t depth_min,
+        const int ply,
+        const int alpha,
+        const int beta
+    ) const {
+        TTProbeResult r{};
+        if (!this->entries) return r;
+
+        const uint32_t idx = static_cast<uint32_t>(key) & static_cast<uint32_t>(this->buckets - 1);
+        const uint16_t key16 = hi16(key);
+
+        for (int way = 0; way < BUCKET_SIZE; ++way) {
+            const uint64_t raw = this->entries[idx * BUCKET_SIZE + way].load(std::memory_order_relaxed);
+            if (raw == 0) continue;
+
+            const Entity d = decode(raw);
+
+            if (d.key16 != key16) continue;
+            if (d.depth < depth_min) continue;
+
+            r.hit = true;
+            r.depth = d.depth;
+            r.flag = static_cast<TTFlag>(d.flag);
+            r.move = d.move;
+
+            const int s = static_cast<int>(static_cast<int16_t>(d.score16));
+            r.score = Evaluation::fromTtScore(s, ply);
+
+            if (r.flag == TTFlag::EXACT) return r;
+            if (r.flag == TTFlag::LOWER && r.score >= beta) return r;
+            if (r.flag == TTFlag::UPPER && r.score <= alpha) return r;
+
+            return r;
         }
-        currentAge = 0;
+        return r;
     }
 
-    void newSearchIteration() {
-        currentAge = (currentAge + 1) & 0x3F;
-    }
+    void store(
+        const BitBoard key,
+        const uint8_t depth,
+        const int score,
+        TTFlag flag,
+        const Move::Move move,
+        const int ply
+    ) {
+        if (!this->entries) return;
 
-    TTProbeResult probe(uint64_t key, uint8_t minDepth) const {
-        TTProbeResult res;
-        const size_t idx = static_cast<size_t>(key & mask);
+        const uint32_t idx = static_cast<uint32_t>(key) & static_cast<uint32_t>(this->buckets - 1);
+        const uint16_t key16 = hi16(key);
+        const uint8_t gen = this->generation.load(std::memory_order_relaxed) & 0x3F;
 
-        uint64_t k1 = keys[idx].load(std::memory_order_acquire);
-        if (k1 == 0) return res;
-        if ((k1 ^ key) != 0) return res;
+        Entity e{};
+        e.key16 = key16;
+        e.depth = depth;
+        e.flag = static_cast<uint8_t>(flag);
+        e.generation = gen;
+        e.move = move;
 
-        uint64_t packed = values[idx].load(std::memory_order_relaxed);
-        uint64_t k2 = keys[idx].load(std::memory_order_acquire);
-        if (k1 != k2) return res;
+        const int tt = Evaluation::toTtScore(score, ply);
+        e.score16 = static_cast<uint16_t>(static_cast<int16_t>(std::clamp(tt, -32767, 32767)));
 
-        unpackValue(packed, res.score, res.depth, res.flag, res.move);
-        if (res.depth >= minDepth) {
-            res.hit = true;
-            return res;
-        }
+        const uint64_t raw = encode(e);
 
-        // depth too small => miss but keep move for ordering
-        return res;
-    }
+        int victim = -1;
+        int worstScore = 1e9;
 
-    void store(uint64_t key, uint8_t depth, int32_t score, TTFlag flag, PackedMove move) {
-        const size_t idx = static_cast<size_t>(key & mask);
-        const uint64_t packed = packValue(score, depth, flag, move, currentAge);
+        for (int way = 0; way < BUCKET_SIZE; ++way) {
+            const size_t pos = idx * BUCKET_SIZE + way;
+            const uint64_t cur = this->entries[pos].load(std::memory_order_relaxed);
 
-        uint64_t existingKey = keys[idx].load(std::memory_order_acquire);
-        if (existingKey != 0 && (existingKey ^ key) == 0) {
-            uint64_t existingPacked = values[idx].load(std::memory_order_relaxed);
-            uint8_t existingDepth = unpackDepth(existingPacked);
-            if (!(existingDepth > depth && (currentAge == unpackAge(existingPacked)))) {
-                values[idx].store(packed, std::memory_order_relaxed);
-                keys[idx].store(key, std::memory_order_release);
+            if (cur == 0) {
+                this->entries[pos].store(raw, std::memory_order_relaxed);
+                return;
             }
-            return;
-        }
 
-        if (existingKey == 0) {
-            values[idx].store(packed, std::memory_order_relaxed);
-            keys[idx].store(key, std::memory_order_release);
-            return;
-        } else {
-            uint64_t existingPacked = values[idx].load(std::memory_order_relaxed);
-            uint8_t existingDepth = unpackDepth(existingPacked);
-            uint8_t existingAge = unpackAge(existingPacked);
-            uint8_t ageGap = static_cast<uint8_t>((currentAge - existingAge) & 0x3F);
+            const Entity d = decode(cur);
 
-            bool replace = false;
-            if (depth > existingDepth) replace = true;
-            else if (depth == existingDepth && ageGap > 0) replace = true;
-            else if (ageGap > 10) replace = true;
+            if (d.key16 == key16) {
+                if (depth >= d.depth || is_newer(gen, d.generation)) {
+                    this->entries[pos].store(raw, std::memory_order_relaxed);
+                }
+                return;
+            }
 
-            if (replace) {
-                values[idx].store(packed, std::memory_order_relaxed);
-                keys[idx].store(key, std::memory_order_release);
+            const int age_penalty = is_newer(d.generation, gen) ? 8 : 0; // jeśli stary -> większa kara
+            const int score_victim = static_cast<int>(d.depth) - age_penalty;
+            if (score_victim < worstScore) {
+                worstScore = score_victim;
+                victim = static_cast<int>(pos);
             }
         }
-    }
 
-    size_t entryCount() const { return size; }
+        if (victim >= 0) {
+            this->entries[static_cast<size_t>(victim)].store(raw, std::memory_order_relaxed);
+        }
+    }
 
 private:
-    size_t size;
-    size_t mask;
-    // replaced std::vector<std::atomic<uint64_t>> by unique_ptr to array of atomics
-    std::unique_ptr<std::atomic<uint64_t>[]> keys;
-    std::unique_ptr<std::atomic<uint64_t>[]> values;
-    std::atomic<uint8_t> currentAgeAtomic{0};
-    uint8_t currentAge = 0;
+    struct Entity {
+        Move::Move move;
+        uint16_t score16;
+        uint8_t depth;
+        uint8_t flag;
+        uint8_t generation;
+        uint16_t key16;
+    };
 
-    static uint64_t packValue(int32_t score, uint8_t depth, TTFlag flag, PackedMove move, uint8_t age) {
-        uint64_t s = static_cast<uint32_t>(static_cast<uint32_t>(score) ^ 0x80000000u);
-        uint64_t res = 0;
-        res |= (uint64_t)(move & 0xFFFFu);
-        res |= (s & 0xFFFFFFFFull) << 16;
-        res |= (uint64_t)(depth) << 48;
-        res |= (uint64_t)(static_cast<uint8_t>(flag) & 0x3u) << 56;
-        res |= (uint64_t)(age & 0x3Fu) << 58;
-        return res;
-    }
-
-    static void unpackValue(uint64_t packed, int32_t &outScore, uint8_t &outDepth, TTFlag &outFlag, PackedMove &outMove) {
-        outMove = static_cast<PackedMove>(packed & 0xFFFFu);
-        uint32_t s = static_cast<uint32_t>((packed >> 16) & 0xFFFFFFFFu);
-        outScore = static_cast<int32_t>(s ^ 0x80000000u);
-        outDepth = static_cast<uint8_t>((packed >> 48) & 0xFFu);
-        outFlag = static_cast<TTFlag>((packed >> 56) & 0x3u);
+    static uint64_t encode(const Entity &e) {
+        return (static_cast<uint64_t>(e.key16) << 48) |
+               (static_cast<uint64_t>(e.generation) << 42) |
+               (static_cast<uint64_t>(e.flag & 0x3) << 40) |
+               (static_cast<uint64_t>(e.depth) << 32) |
+               (static_cast<uint64_t>(e.score16) << 16) |
+               (static_cast<uint64_t>(e.move));
     }
 
-    static uint8_t unpackDepth(uint64_t packed) {
-        return static_cast<uint8_t>((packed >> 48) & 0xFFu);
+    static Entity decode(const BitBoard x) {
+        Entity d{};
+        d.move = static_cast<uint16_t>(x & 0xFFFFu);
+        d.score16 = static_cast<uint16_t>((x >> 16) & 0xFFFFu);
+        d.depth = static_cast<uint8_t>((x >> 32) & 0xFFu);
+        d.flag = static_cast<uint8_t>((x >> 40) & 0x3u);
+        d.generation = static_cast<uint8_t>((x >> 42) & 0x3Fu);
+        d.key16 = static_cast<uint16_t>((x >> 48) & 0xFFFFu);
+        return d;
     }
-    static uint8_t unpackAge(uint64_t packed) {
-        return static_cast<uint8_t>((packed >> 58) & 0x3Fu);
+
+    static uint16_t hi16(const uint64_t key) {
+        return static_cast<uint16_t>((key >> 48) & 0xFFFFu);
     }
+
+    static bool is_newer(const uint8_t a, const uint8_t b) {
+        return static_cast<uint8_t>(a - b) < 32;
+    }
+
+
+    size_t buckets{0};
+    std::unique_ptr<std::atomic<uint64_t>[]> entries;
+    std::atomic<uint8_t> generation{1};
 };

@@ -80,6 +80,18 @@ public:
         return getMaterialScore(board) + getPieceSquareTableScore(board);
     }
 
+    static int toTtScore(const int score, const int ply) {
+        if (score >= MATE - 1000) return score + ply;
+        if (score <= -MATE + 1000) return score - ply;
+        return score;
+    }
+
+    static int fromTtScore(const int score, const int ply) {
+        if (score >= MATE - 1000) return score - ply;
+        if (score <= -MATE + 1000) return score + ply;
+        return score;
+    }
+
 private:
     static int getPieceSquareValue(const short *pst, const uint8_t position, const PieceColor c) {
         return (c == PieceColor::WHITE) ? pst[position ^ 56] : pst[position];
@@ -122,7 +134,7 @@ private:
                 score += (color == PieceColor::WHITE
                               ? getPieceSquareValue(pst, position, color)
                               : -getPieceSquareValue(pst, position, color));
-                bb &=(bb - 1);
+                bb &= (bb - 1);
             }
         };
 
