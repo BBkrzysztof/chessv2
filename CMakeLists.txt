@@ -30,7 +30,8 @@ add_executable(chess
         Engine/Engine.hpp
         Engine/TranspositionTable/TranspositionTable.hpp
         Board/Zobrist.hpp
-        Engine/AlphaBeta/AlphaBeta.hpp)
+        Engine/AlphaBeta/AlphaBeta.hpp
+        MoveGenerator/MoveExecutor/UndoInfo.hpp)
 
 FetchContent_Declare(
         catch2
