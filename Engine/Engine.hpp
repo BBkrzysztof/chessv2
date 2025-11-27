@@ -20,7 +20,7 @@ struct RootResult {
 class Engine {
 public:
     static RootResult run(
-        const Board &board,
+        Board &board,
         const SearchConfig &config,
         TranspositionTable &table
     ) {
@@ -31,15 +31,19 @@ public:
 
         int alpha = Evaluation::NEG_INF;
         constexpr int beta = Evaluation::INF;
+        const auto us = board.side;
 
         for (const auto move: m) {
-            auto child = MoveExecutor::executeMove(board, move);
+            UndoInfo &undo = undoStack[1];
+            MoveExecutor::makeMove(board, move,undo);
 
-            if (MoveExecutor::isCheck(child, board.side)) {
+            if (MoveExecutor::isCheck(board, us)) {
+                MoveExecutor::unmakeMove(board, move,undo);
                 continue;
             }
 
-            const auto score = PvSplit::searchPvSplit(pool, config, child, table, alpha, beta, config.maxDepth - 1, 1);
+            const auto score = PvSplit::searchPvSplit(pool, config, board, table, alpha, beta, config.maxDepth - 1, 1);
+            MoveExecutor::unmakeMove(board, move,undo);
 
             if (score > beta) {
                 return {beta, move};

@@ -97,11 +97,11 @@ public:
     }
 
     void store(
-        const BitBoard key,
+        const BitBoard &key,
         const uint8_t depth,
-        const int score,
+        const int &score,
         TTFlag flag,
-        const Move::Move move,
+        const Move::Move &move,
         const int ply
     ) {
         if (!this->entries) return;

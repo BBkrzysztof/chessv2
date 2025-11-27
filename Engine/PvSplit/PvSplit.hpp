@@ -7,12 +7,13 @@
 #include "../Utils/SearchConfig.hpp"
 #include "../TranspositionTable/TranspositionTable.hpp"
 
+
 class PvSplit {
 public:
     static int searchPvSplit(
         ThreadPool &pool,
         const SearchConfig &config,
-        const Board &board,
+        Board &board,
         TranspositionTable &table,
         int alpha,
         const int beta,
@@ -23,6 +24,7 @@ public:
             return Evaluation::evaluate(board);
         }
 
+        const auto us = board.side;
         int best = Evaluation::NEG_INF;
         const int alpha0 = alpha;
         Move::Move bestMove = 0;
@@ -34,36 +36,57 @@ public:
         }
 
         const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
-        const auto firstMove = m[0];
-
-        auto firstChild = MoveExecutor::executeMove(board, firstMove);
-        if (!MoveExecutor::isCheck(firstChild, board.side)) {
-            const auto score = -searchPvSplit(pool, config, firstChild, table, -beta, -alpha, depth - 1, ply + 1);
-            if (score > best) {
-                best = score;
-                bestMove = firstMove;
+        if (m.empty()) {
+            if (MoveExecutor::isCheck(board, us)) {
+                return -Evaluation::MATE + ply;
             }
-            if (best > alpha) {
-                alpha = score;
-                if (alpha >= beta) {
-                    table.store(board.zobrist, depth, beta, TTFlag::LOWER, bestMove, ply);
-                    return alpha;
+            return 0;
+        }
+
+        const auto firstMove = m[0];
+        {
+            UndoInfo &undo = undoStack[ply];
+            MoveExecutor::makeMove(board, firstMove, undo);
+
+            if (!MoveExecutor::isCheck(board, us)) {
+                const auto score = -searchPvSplit(pool, config, board, table, -beta, -alpha, depth - 1, ply + 1);
+                MoveExecutor::unmakeMove(board, firstMove, undo);
+
+                if (score > best) {
+                    best = score;
+                    bestMove = firstMove;
                 }
+                if (best > alpha) {
+                    alpha = score;
+                    if (alpha >= beta) {
+                        table.store(board.zobrist, depth, beta, TTFlag::LOWER, bestMove, ply);
+                        return alpha;
+                    }
+                }
+            }else {
+                MoveExecutor::unmakeMove(board, firstMove, undo);
             }
         }
 
-        const auto canSplit = ply >=  config.splitMinDepth;
+
+        const auto canSplit = ply >= config.splitMinDepth;
         if (!canSplit) {
             for (int i = 1; i < m.size(); i++) {
-                auto child = MoveExecutor::executeMove(board, m[i]);
-                if (MoveExecutor::isCheck(child, board.side)) {
+                const auto move = m[i];
+                UndoInfo &undo = undoStack[ply];
+
+                MoveExecutor::makeMove(board, move, undo);
+                if (MoveExecutor::isCheck(board, us)) {
+                    MoveExecutor::unmakeMove(board, move, undo);
                     continue;
                 }
 
-                auto sc = -AlphaBeta::search(child, table, depth - 1, -beta, -alpha, ply + 1);
+                const auto sc = -AlphaBeta::search(board, table, depth - 1, -beta, -alpha, ply + 1);
+                MoveExecutor::unmakeMove(board, move, undo);
+
                 if (sc > best) {
                     best = sc;
-                    bestMove = m[i];
+                    bestMove = move;
                 }
                 if (sc > alpha) {
                     alpha = sc;
@@ -140,19 +163,28 @@ private:
         std::mutex &doneMutex,
         std::condition_variable &doneCv
     ) {
+        const auto us = sp.parent.side;
+        Board child = sp.parent;
+
         while (!sp.abort.load(std::memory_order_relaxed)) {
             const int i = sp.nextIdx.fetch_add(1, std::memory_order_relaxed);
             if (i >= static_cast<int>(sp.moves.size())) break;
 
             const Move::Move move = sp.moves[i];
-            const auto us = sp.parent.side;
-            auto child = MoveExecutor::executeMove(sp.parent, move);
-            if (MoveExecutor::isCheck(child, us)) continue;
+
+            UndoInfo undo{};
+
+            MoveExecutor::makeMove(child, move, undo);
+            if (MoveExecutor::isCheck(child, us)) {
+                MoveExecutor::unmakeMove(child, move, undo);
+                continue;
+            };
 
             const int a = sp.alpha.load(std::memory_order_acquire);
             const int b = sp.beta;
 
             const int sc = -AlphaBeta::search(child, table, sp.depth - 1, -b, -a, ply + 1);
+            MoveExecutor::unmakeMove(child, move, undo);
 
             // CAS na α + best; cutoff na >= beta
             int prev = sp.alpha.load(std::memory_order_acquire);

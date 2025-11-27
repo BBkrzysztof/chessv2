@@ -6,10 +6,15 @@
 #include "../../MoveGenerator/MoveExecutor/MoveExecutor.hpp"
 #include "../TranspositionTable/TranspositionTable.hpp"
 
+constexpr int MAX_DEPTH = 128;
+
+
+inline thread_local UndoInfo undoStack[MAX_DEPTH];
+
 class AlphaBeta {
 public:
     static int search(
-        const Board &board,
+        Board &board,
         TranspositionTable &table,
         const int depth,
         int alpha,
@@ -17,6 +22,8 @@ public:
         const int ply
     ) {
         const auto alpha0 = alpha;
+        const auto us = board.side;
+
         if (depth == 0) {
             return Evaluation::evaluate(board);
         }
@@ -27,19 +34,32 @@ public:
             if (pr.flag == TTFlag::LOWER && pr.score >= beta) return pr.score;
             if (pr.flag == TTFlag::UPPER && pr.score <= alpha) return pr.score;
         }
-        Move::Move bestMove = 0;
+
         const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(
             board
         );
 
-        for (const auto &move: m) {
-            auto newPosition = MoveExecutor::executeMove(board, move);
+        if (m.empty()) {
+            if (MoveExecutor::isCheck(board, us)) {
+                return -Evaluation::MATE + ply;
+            }
+            return 0;
+        }
 
-            if (MoveExecutor::isCheck(newPosition, board.side)) {
+        Move::Move bestMove = 0;
+
+        for (const auto &move: m) {
+            UndoInfo &undo = undoStack[ply];
+            MoveExecutor::makeMove(board, move, undo);
+
+            if (MoveExecutor::isCheck(board, us)) {
+                MoveExecutor::unmakeMove(board, move, undo);
                 continue;
             }
 
-            const auto score = -search(newPosition, table, depth - 1, -beta, -alpha, ply);
+            const auto score = -search(board, table, depth - 1, -beta, -alpha, ply+1);
+
+            MoveExecutor::unmakeMove(board, move, undo);
 
             if (score >= beta) {
                 table.store(board.zobrist, depth, beta, TTFlag::LOWER, move, ply);
@@ -48,9 +68,6 @@ public:
             if (score > alpha) {
                 alpha = score;
                 bestMove = move;
-                if (alpha >= beta) {
-                    return alpha;
-                }
             }
         }
 
