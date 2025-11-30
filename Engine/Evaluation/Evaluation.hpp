@@ -77,7 +77,12 @@ public:
     };
 
     static int evaluate(const Board &board) {
-        return getMaterialScore(board) + getPieceSquareTableScore(board);
+        const int result = getMaterialScore(board) + getPieceSquareTableScore(board);
+        if (board.side == PieceColor::WHITE) {
+            return result;
+        }
+
+        return -result;
     }
 
     static int toTtScore(const int score, const int ply) {
@@ -102,7 +107,7 @@ private:
         int score = 0;
 
         auto add = [&](const PieceColor &color, const PieceType &type, const int &value) {
-            score += (color == PieceColor::WHITE ? +value : -value) * Bitboards::popCount64(board.pieces[color][type]);
+            score += (color == PieceColor::WHITE ? value : -value) * Bitboards::popCount64(board.pieces[color][type]);
         };
 
         add(PieceColor::WHITE, PieceType::PAWN, VALUE_PAWN);

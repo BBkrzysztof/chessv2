@@ -78,11 +78,13 @@ public:
         getBishopMoves(side, board, moves);
         getKnightMoves(side, board, moves);
 
+
         if (side == PieceColor::WHITE) {
             getWhitePawnMoves(board, moves);
         } else {
             getBlackPawnMoves(board, moves);
         }
+
 
         getKingMovesWithoutCastle(side, board, moves);
 

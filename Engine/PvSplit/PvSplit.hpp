@@ -38,7 +38,7 @@ public:
         const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
         if (m.empty()) {
             if (MoveExecutor::isCheck(board, us)) {
-                return -Evaluation::MATE + ply;
+                return  -Evaluation::MATE - ply;
             }
             return 0;
         }
@@ -63,13 +63,15 @@ public:
                         return alpha;
                     }
                 }
-            }else {
+            } else {
                 MoveExecutor::unmakeMove(board, firstMove, undo);
             }
         }
 
 
-        const auto canSplit = ply >= config.splitMinDepth;
+        const auto canSplit = depth <= config.splitMinDepth;
+        bool foundLegalMoves = false;
+
         if (!canSplit) {
             for (int i = 1; i < m.size(); i++) {
                 const auto move = m[i];
@@ -80,7 +82,7 @@ public:
                     MoveExecutor::unmakeMove(board, move, undo);
                     continue;
                 }
-
+                foundLegalMoves = true;
                 const auto sc = -AlphaBeta::search(board, table, depth - 1, -beta, -alpha, ply + 1);
                 MoveExecutor::unmakeMove(board, move, undo);
 
@@ -96,6 +98,14 @@ public:
                     }
                 }
             }
+
+            if (!foundLegalMoves) {
+                if (MoveExecutor::isCheck(board, us)) {
+                    return -Evaluation::MATE - ply;
+                }
+                return 0;
+            }
+
 
             TTFlag flag;
             if (alpha <= alpha0) {

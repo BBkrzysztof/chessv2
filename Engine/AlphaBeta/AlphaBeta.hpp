@@ -27,7 +27,6 @@ public:
         if (depth == 0) {
             return Evaluation::evaluate(board);
         }
-        table.newSearch();
 
         if (const auto pr = table.probe(board.zobrist, depth, ply, alpha, beta); pr.hit) {
             if (pr.flag == TTFlag::EXACT) return pr.score;
@@ -41,13 +40,14 @@ public:
 
         if (m.empty()) {
             if (MoveExecutor::isCheck(board, us)) {
-                return -Evaluation::MATE + ply;
+                return  -Evaluation::MATE - ply;
             }
             return 0;
         }
 
         Move::Move bestMove = 0;
 
+        bool foundLegalMoves = false;
         for (const auto &move: m) {
             UndoInfo &undo = undoStack[ply];
             MoveExecutor::makeMove(board, move, undo);
@@ -57,8 +57,8 @@ public:
                 continue;
             }
 
-            const auto score = -search(board, table, depth - 1, -beta, -alpha, ply+1);
-
+            const auto score = -search(board, table, depth - 1, -beta, -alpha, ply + 1);
+            foundLegalMoves = true;
             MoveExecutor::unmakeMove(board, move, undo);
 
             if (score >= beta) {
@@ -69,6 +69,14 @@ public:
                 alpha = score;
                 bestMove = move;
             }
+        }
+
+
+        if (!foundLegalMoves) {
+            if (MoveExecutor::isCheck(board, us)) {
+                return -Evaluation::MATE - ply;
+            }
+            return 0;
         }
 
         TTFlag flag;
