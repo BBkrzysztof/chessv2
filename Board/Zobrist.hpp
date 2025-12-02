@@ -11,7 +11,7 @@ public:
     static constexpr int PIECE_INDEX = COLORS * PIECE_TYPES;
     static constexpr int SQUARES = 64;
 
-    static Zobrist &instance() {
+    static Zobrist& instance() {
         static auto instance = [] {
             return Zobrist();
         }();

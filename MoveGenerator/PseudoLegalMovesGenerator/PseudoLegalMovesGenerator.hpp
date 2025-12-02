@@ -70,6 +70,7 @@ public:
         const Board &board
     ) {
         Move::MoveList moves;
+        moves.m.reserve(128);
 
         const PieceColor side = board.side;
 
@@ -155,7 +156,7 @@ private:
     ) {
         const BitBoard friendllyOccupation = board.occupancy[color];
         const auto from = static_cast<uint8_t>(Bitboards::lsb_index(board.pieces[color][PieceType::KING]));
-        const auto moves = preComputedMoves.king[from] & ~friendllyOccupation;
+        auto moves = preComputedMoves.king[from] & ~friendllyOccupation;
 
         emitMoves(from, moves, moveList);
     }
@@ -169,7 +170,7 @@ private:
 
         for (BitBoard temp = board.pieces[color][PieceType::KNIGHT]; temp; Bitboards::pop_lsb(temp)) {
             const auto from = static_cast<uint8_t>(Bitboards::lsb_index(temp));
-            const auto moves = preComputedMoves.knight[from] & ~friendllyOccupation;
+            auto moves = preComputedMoves.knight[from] & ~friendllyOccupation;
             emitMoves(from, moves, moveList);
         }
     }
@@ -189,7 +190,7 @@ private:
             const auto relevant = mask & occupancyAll;
             const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-            const auto moves = preComputedMoves.bishop[from][idx] & ~friendllyOccupation;
+            auto moves = preComputedMoves.bishop[from][idx] & ~friendllyOccupation;
 
             emitMoves(from, moves, moveList);
         }
@@ -210,7 +211,7 @@ private:
             const auto relevant = mask & occupancyAll;
             const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-            const auto moves = preComputedMoves.rook[from][idx] & ~friendllyOccupation;
+            auto moves = preComputedMoves.rook[from][idx] & ~friendllyOccupation;
 
             emitMoves(from, moves, moveList);
         }
@@ -231,7 +232,7 @@ private:
             const auto relevant = mask & occupancyAll;
             const auto idx = MagicBoardIndexGenerator::getId(relevant, mask);
 
-            const auto moves = preComputedMoves.queen[from][idx] & ~friendllyOccupation;
+            auto moves = preComputedMoves.queen[from][idx] & ~friendllyOccupation;
 
             emitMoves(from, moves, moveList);
         }
@@ -416,7 +417,7 @@ private:
     }
 
 
-    static void emitMoves(const uint8_t &from, BitBoard dest, Move::MoveList &out) {
+    static void emitMoves(const uint8_t &from, BitBoard &dest, Move::MoveList &out) {
         while (dest) {
             const auto to = static_cast<uint8_t>(Bitboards::lsb_index(dest));
             out.push(Move::encodeMove(from, to, Move::MoveType::MT_NORMAL));

@@ -34,11 +34,11 @@ public:
             if (pr.flag == TTFlag::UPPER && pr.score <= alpha) return pr.score;
         }
 
-        const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(
+        const auto moveList = PseudoLegalMovesGenerator::generatePseudoLegalMoves(
             board
         );
 
-        if (m.empty()) {
+        if (moveList.m.empty()) {
             if (MoveExecutor::isCheck(board, us)) {
                 return  -Evaluation::MATE - ply;
             }
@@ -48,7 +48,7 @@ public:
         Move::Move bestMove = 0;
 
         bool foundLegalMoves = false;
-        for (const auto &move: m) {
+        for (const auto &move: moveList.m) {
             UndoInfo &undo = undoStack[ply];
             MoveExecutor::makeMove(board, move, undo);
 

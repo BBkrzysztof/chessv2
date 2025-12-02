@@ -61,21 +61,7 @@ public:
     };
 
     ~Board() = default;
-
-    Board(const Board &other) noexcept {
-        std::copy_n(&other.pieces[0][0], 2 * 6, &this->pieces[0][0]);
-        std::copy_n(other.occupancy, 2, this->occupancy);
-        this->occupancyAll = other.occupancyAll;
-        std::copy_n(other.pieceOn, 64, this->pieceOn);
-        this->side = other.side;
-        this->castle = other.castle;
-        this->ep = other.ep;
-        this->halfMove = other.halfMove;
-        this->fullMove = other.fullMove;
-        this->kingSq[WHITE] = other.kingSq[WHITE];
-        this->kingSq[BLACK] = other.kingSq[BLACK];
-        this->zobrist = other.zobrist;
-    }
+    Board(const Board &) noexcept = default;
 
     void setPiece(
         const PieceColor &color,

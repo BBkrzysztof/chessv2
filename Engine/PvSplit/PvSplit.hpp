@@ -1,9 +1,7 @@
 #pragma once
 
-#include "../PvSearch/PvSearch.hpp"
 #include "../ThreadPool/ThreadPool.hpp"
 #include "../Utils/SplitPoint.hpp"
-#include "../QuickSearch/QuickSearch.hpp"
 #include "../Utils/SearchConfig.hpp"
 #include "../TranspositionTable/TranspositionTable.hpp"
 
@@ -35,15 +33,15 @@ public:
             if (pr.flag == TTFlag::UPPER && pr.score <= alpha) return pr.score;
         }
 
-        const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
-        if (m.empty()) {
+        const auto moveList = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
+        if (moveList.m.empty()) {
             if (MoveExecutor::isCheck(board, us)) {
                 return  -Evaluation::MATE - ply;
             }
             return 0;
         }
 
-        const auto firstMove = m[0];
+        const auto firstMove = moveList.m[0];
         {
             UndoInfo &undo = undoStack[ply];
             MoveExecutor::makeMove(board, firstMove, undo);
@@ -69,12 +67,12 @@ public:
         }
 
 
-        const auto canSplit = depth <= config.splitMinDepth;
+        const auto canSplit = depth <= config.splitMinDepth && moveList.m.size() > config.splitMinDepth;
         bool foundLegalMoves = false;
 
         if (!canSplit) {
-            for (int i = 1; i < m.size(); i++) {
-                const auto move = m[i];
+            for (int i = 1; i < moveList.m.size(); i++) {
+                const auto move = moveList.m[i];
                 UndoInfo &undo = undoStack[ply];
 
                 MoveExecutor::makeMove(board, move, undo);
@@ -85,7 +83,6 @@ public:
                 foundLegalMoves = true;
                 const auto sc = -AlphaBeta::search(board, table, depth - 1, -beta, -alpha, ply + 1);
                 MoveExecutor::unmakeMove(board, move, undo);
-
                 if (sc > best) {
                     best = sc;
                     bestMove = move;
@@ -118,13 +115,13 @@ public:
             return alpha;
         }
 
-        SplitPoint sp{board, alpha, beta, depth, ply, true, m};
+        SplitPoint sp{board, alpha, beta, depth, ply, true, moveList.m};
         sp.nextIdx.store(1, std::memory_order_relaxed);
         sp.bestMove = bestMove;
         sp.bestScore.store(best, std::memory_order_relaxed);
 
 
-        const unsigned toSpawn = std::min<unsigned>(pool.size() - 1, (m.size() > 1 ? m.size() - 1 : 0));
+        const unsigned toSpawn = std::min<unsigned>(pool.size() - 1, (moveList.m.size() > 1 ? moveList.m.size() - 1 : 0));
         sp.active.store(static_cast<int>(toSpawn) + 1, std::memory_order_relaxed);
 
         std::mutex doneMutex;

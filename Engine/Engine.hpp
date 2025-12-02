@@ -27,13 +27,13 @@ public:
         ThreadPool pool(config.threads);
         RootResult result{0, 0};
 
-        const auto [m] = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
+        const auto moveList = PseudoLegalMovesGenerator::generatePseudoLegalMoves(board);
 
         int alpha = Evaluation::NEG_INF;
         constexpr int beta = Evaluation::INF;
         const auto us = board.side;
 
-        for (const auto &move: m) {
+        for (const auto &move: moveList.m) {
             UndoInfo &undo = undoStack[0];
             MoveExecutor::makeMove(board, move,undo);
             if (MoveExecutor::isCheck(board, us)) {
@@ -42,7 +42,6 @@ public:
             }
 
             const auto score = -PvSplit::searchPvSplit(pool, config, board, table,  alpha, beta, config.maxDepth, 1);
-            // Bitboards::print_bb(board.occupancyAll);
             // std::cout << score << std::endl;
             MoveExecutor::unmakeMove(board, move,undo);
 

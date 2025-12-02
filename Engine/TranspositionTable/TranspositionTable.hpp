@@ -58,7 +58,7 @@ public:
     }
 
     TTProbeResult probe(
-        const BitBoard key,
+        const BitBoard &key,
         const uint8_t depth_min,
         const int ply,
         const int alpha,
@@ -175,7 +175,7 @@ private:
                (static_cast<uint64_t>(e.move));
     }
 
-    static Entity decode(const BitBoard x) {
+    static Entity decode(const BitBoard &x) {
         Entity d{};
         d.move = static_cast<uint16_t>(x & 0xFFFFu);
         d.score16 = static_cast<uint16_t>((x >> 16) & 0xFFFFu);
@@ -186,7 +186,7 @@ private:
         return d;
     }
 
-    static uint16_t hi16(const uint64_t key) {
+    static uint16_t hi16(const uint64_t &key) {
         return static_cast<uint16_t>((key >> 48) & 0xFFFFu);
     }
 
