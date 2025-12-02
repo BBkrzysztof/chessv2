@@ -1,16 +1,16 @@
 #pragma once
 
 #include <string>
-#include <sstream>
 
 #include "../Board/Board.hpp"
+#include "../Board/Zobrist.hpp"
 
 
 class Parser {
 public:
-    static std::unique_ptr<Board> loadFen(const std::string_view fen) {
+    static Board loadFen(const std::string_view fen) {
         using namespace std::literals;
-        auto board = std::make_unique<Board>();
+        Board board;
 
 
         // 1) Podziel na 6 pól FEN
@@ -48,7 +48,7 @@ public:
                 fenCharToPieceTypeAndColor(c, pieceColor, pieceType);
 
                 const auto sq = static_cast<uint8_t>(row * 8 + col);
-                board->setPiece(pieceColor, pieceType, sq);
+                board.setPiece(pieceColor, pieceType, sq);
                 ++col;
             }
         }
@@ -56,26 +56,30 @@ public:
         // 4) Side to move
         {
             char c = fields[1][0];
-            if (c == 'w') board->side = PieceColor::WHITE;
-            else if (c == 'b') board->side = PieceColor::BLACK;
+            if (c == 'w') board.side = PieceColor::WHITE;
+            else if (c == 'b') board.side = PieceColor::BLACK;
         }
 
         // 5) Castling rights
         {
-            board->castle = 0;
+            board.castle = 0;
             auto cs = fields[2];
             if (cs == "-"sv) {
                 // brak praw
             } else {
                 for (const char &c: cs) {
                     switch (c) {
-                        case 'K': board->castle |= 1;
+                        case 'K':
+                            board.castle |= 1;
                             break; // white short
-                        case 'Q': board->castle |= 2;
+                        case 'Q':
+                            board.castle |= 2;
                             break; // white long
-                        case 'k': board->castle |= 4;
+                        case 'k':
+                            board.castle |= 4;
                             break; // black short
-                        case 'q': board->castle |= 8;
+                        case 'q':
+                            board.castle |= 8;
                             break; // black long
                     }
                 }
@@ -84,18 +88,20 @@ public:
 
         // 6) En passant
         {
-            board->ep = parseEpSquare(fields[3]);
+            board.ep = parseEpSquare(fields[3]);
         }
 
         // 7) Opcjonalne halfmove/fullmove
         if (!fields[4].empty()) {
-            parseUint(fields[4], board->halfMove);
-        } else board->halfMove = 0;
+            parseUint(fields[4], board.halfMove);
+        } else board.halfMove = 0;
 
         if (!fields[5].empty()) {
-            parseUint(fields[5], board->fullMove);
-            if (board->fullMove < 1) board->fullMove = 1;
-        } else board->fullMove = 1;
+            parseUint(fields[5], board.fullMove);
+            if (board.fullMove < 1) board.fullMove = 1;
+        } else board.fullMove = 1;
+
+        board.zobrist = Zobrist::instance().computeKey(board);
 
         return board;
     }
@@ -136,44 +142,57 @@ private:
     ) {
         switch (c) {
             // białe
-            case 'P': col = PieceColor::WHITE;
+            case 'P':
+                col = PieceColor::WHITE;
                 pc = PieceType::PAWN;
                 break;
-            case 'N': col = PieceColor::WHITE;
+            case 'N':
+                col = PieceColor::WHITE;
                 pc = PieceType::KNIGHT;
                 break;
-            case 'B': col = PieceColor::WHITE;
+            case 'B':
+                col = PieceColor::WHITE;
                 pc = PieceType::BISHOP;
                 break;
-            case 'R': col = PieceColor::WHITE;
+            case 'R':
+                col = PieceColor::WHITE;
                 pc = PieceType::ROOK;
                 break;
-            case 'Q': col = PieceColor::WHITE;
+            case 'Q':
+                col = PieceColor::WHITE;
                 pc = PieceType::QUEEN;
                 break;
-            case 'K': col = PieceColor::WHITE;
+            case 'K':
+                col = PieceColor::WHITE;
                 pc = PieceType::KING;
                 break;
             // czarne
-            case 'p': col = PieceColor::BLACK;
+            case 'p':
+                col = PieceColor::BLACK;
                 pc = PieceType::PAWN;
                 break;
-            case 'n': col = PieceColor::BLACK;
+            case 'n':
+                col = PieceColor::BLACK;
                 pc = PieceType::KNIGHT;
                 break;
-            case 'b': col = PieceColor::BLACK;
+            case 'b':
+                col = PieceColor::BLACK;
                 pc = PieceType::BISHOP;
                 break;
-            case 'r': col = PieceColor::BLACK;
+            case 'r':
+                col = PieceColor::BLACK;
                 pc = PieceType::ROOK;
                 break;
-            case 'q': col = PieceColor::BLACK;
+            case 'q':
+                col = PieceColor::BLACK;
                 pc = PieceType::QUEEN;
                 break;
-            case 'k': col = PieceColor::BLACK;
+            case 'k':
+                col = PieceColor::BLACK;
                 pc = PieceType::KING;
                 break;
-            default: break;
+            default:
+                break;
         }
     }
 };

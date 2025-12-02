@@ -17,7 +17,7 @@ class MagicBoardIndexGenerator {
 #endif
     }
 
-    static inline BitBoard pext64_soft(BitBoard x, BitBoard m){
+    static inline BitBoard pext64_soft(const BitBoard &x, BitBoard m){
         BitBoard out=0, bb=1;
         while(m){
             BitBoard lsb = m & -m;

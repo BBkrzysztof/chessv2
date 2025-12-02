@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "Zobrist.hpp"
 #include "../Bitboard.h"
 #include "../MoveGenerator/Move/Move.hpp"
 
@@ -44,6 +45,7 @@ public:
     BitBoard pieces[2][6]{};
     BitBoard occupancy[2]{};
     BitBoard occupancyAll{};
+    BitBoard zobrist{};
     int8_t pieceOn[64]{-1};
     PieceColor side = WHITE;
     int castle = 0;
@@ -59,32 +61,22 @@ public:
     };
 
     ~Board() = default;
-
-    Board(const Board &other) noexcept {
-        std::copy_n(&other.pieces[0][0], 2 * 6, &this->pieces[0][0]);
-        std::copy_n(other.occupancy, 2, this->occupancy);
-        this->occupancyAll = other.occupancyAll;
-        std::copy_n(other.pieceOn, 64, this->pieceOn);
-        this->side = other.side;
-        this->castle = other.castle;
-        this->ep = other.ep;
-        this->halfMove = other.halfMove;
-        this->fullMove = other.fullMove;
-        this->kingSq[WHITE] = other.kingSq[WHITE];
-        this->kingSq[BLACK] = other.kingSq[BLACK];
-    }
+    Board(const Board &) noexcept = default;
 
     void setPiece(
         const PieceColor &color,
         const PieceType &type,
         const uint8_t &position
     ) {
+        const auto zobristInstance = Zobrist::instance();
+
         const BitBoard board = Bitboards::bit(position);
+
         this->pieceOn[position] = static_cast<int8_t>(color * 6 + type);
         this->pieces[color][type] |= board;
         this->occupancy[color] |= board;
         this->occupancyAll |= board;
-
+        this->zobrist ^= zobristInstance.pieceRnd[Zobrist::pieceIndexFrom(color, type)][position];
 
         if (type == KING) {
             this->kingSq[color] = position;
@@ -96,20 +88,25 @@ public:
         const PieceType &type,
         const uint8_t &position
     ) {
+        const auto zobristInstance = Zobrist::instance();
+
         const BitBoard board = Bitboards::bit(position);
 
         this->pieceOn[position] = -1;
         this->pieces[color][type] &= ~board;
         this->occupancy[color] &= ~board;
         this->occupancyAll &= ~board;
+        this->zobrist ^= zobristInstance.pieceRnd[Zobrist::pieceIndexFrom(color, type)][position];
     }
 
     void movePiece(
         const PieceColor &color,
         const PieceType &type,
-        const uint8_t &from,
-        const uint8_t &to
+        const uint8_t from,
+        const uint8_t to
     ) {
+        const auto zobristInstance = Zobrist::instance();
+
         const BitBoard boardFrom = Bitboards::bit(from);
         const BitBoard boardTo = Bitboards::bit(to);
 
@@ -120,6 +117,8 @@ public:
         this->pieces[color][type] |= boardTo;
         this->occupancy[color] |= boardTo;
         this->occupancyAll |= boardTo;
+        this->zobrist ^= zobristInstance.pieceRnd[Zobrist::pieceIndexFrom(color, type)][from];
+        this->zobrist ^= zobristInstance.pieceRnd[Zobrist::pieceIndexFrom(color, type)][to];
 
 
         this->pieceOn[to] = static_cast<int8_t>(color * 6 + type);

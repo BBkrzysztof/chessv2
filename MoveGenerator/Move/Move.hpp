@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <iostream>
 
 namespace Move {
 
@@ -10,8 +11,11 @@ namespace Move {
     enum Promo : Move { PR_KNIGHT = 0, PR_BISHOP = 1, PR_ROOK = 2, PR_QUEEN = 3 };
 
     struct MoveList {
+        MoveList() {
+            m.reserve(256);
+        }
         std::vector<Move> m;
-        void push(const Move x) { m.push_back(x); }
+        void push(const Move &x) { m.push_back(x); }
     };
 
     /**
@@ -43,7 +47,7 @@ namespace Move {
      */
     static void extractMovesFromBitboard(
         const uint8_t &from,
-        BitBoard moves,
+        BitBoard &moves,
         MoveList &moveList
     ) {
         while (moves) {

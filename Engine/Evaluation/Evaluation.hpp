@@ -10,7 +10,7 @@ public:
     static constexpr int VALUE_PAWN = 100, VALUE_KNIGHT = 320, VALUE_BISHOP = 330, VALUE_ROOK = 500, VALUE_QUEEN = 900,
             VALUE_KING = 20000;
 
-    static constexpr int PST_PAWN[64] = {
+    static constexpr short PST_PAWN[64] = {
         0, 0, 0, 0, 0, 0, 0, 0,
         50, 50, 50, 50, 50, 50, 50, 50,
         10, 10, 20, 30, 30, 20, 10, 10,
@@ -21,7 +21,7 @@ public:
         0, 0, 0, 0, 0, 0, 0, 0
     };
 
-    static constexpr int PST_KNIGHT[64] = {
+    static constexpr short PST_KNIGHT[64] = {
         -50, -40, -30, -30, -30, -30, -40, -50,
         -40, -20, 0, 5, 5, 0, -20, -40,
         -30, 5, 10, 15, 15, 10, 5, -30,
@@ -32,7 +32,7 @@ public:
         -50, -40, -30, -30, -30, -30, -40, -50
     };
 
-    static constexpr int PST_BISHOP[64] = {
+    static constexpr short PST_BISHOP[64] = {
         -20, -10, -10, -10, -10, -10, -10, -20,
         -10, 5, 0, 0, 0, 0, 5, -10,
         -10, 10, 10, 10, 10, 10, 10, -10,
@@ -43,7 +43,7 @@ public:
         -20, -10, -10, -10, -10, -10, -10, -20
     };
 
-    static constexpr int PST_ROOK[64] = {
+    static constexpr short PST_ROOK[64] = {
         0, 0, 0, 5, 5, 0, 0, 0,
         -5, 0, 0, 0, 0, 0, 0, -5,
         -5, 0, 0, 0, 0, 0, 0, -5,
@@ -54,7 +54,7 @@ public:
         0, 0, 0, 0, 0, 0, 0, 0
     };
 
-    static constexpr int PST_QUEEN[64] = {
+    static constexpr short PST_QUEEN[64] = {
         -20, -10, -10, -5, -5, -10, -10, -20,
         -10, 0, 0, 0, 0, 5, 0, -10,
         -10, 0, 5, 5, 5, 5, 0, -10,
@@ -65,7 +65,7 @@ public:
         -20, -10, -10, -5, -5, -10, -10, -20
     };
 
-    static constexpr int PST_KING[64] = {
+    static constexpr short PST_KING[64] = {
         -30, -40, -40, -50, -50, -40, -40, -30,
         -30, -40, -40, -50, -50, -40, -40, -30,
         -30, -40, -40, -50, -50, -40, -40, -30,
@@ -76,33 +76,38 @@ public:
         20, 30, 10, 0, 0, 10, 30, 20
     };
 
-    static int evaluate(const std::unique_ptr<Board> &board) {
-        return getMaterialScore(board) + getPieceSquareTableScore(board);
+    static int evaluate(const Board &board) {
+        const int result = getMaterialScore(board) + getPieceSquareTableScore(board);
+        if (board.side == PieceColor::WHITE) {
+            return result;
+        }
+
+        return -result;
     }
 
-    static int to_tt_score(int score, int ply) {
-        if (score >= MATE - 1000) return score + ply; // mate found for us
-        if (score <= -MATE + 1000) return score - ply; // mate found for them
+    static int toTtScore(const int score, const int ply) {
+        if (score >= MATE - 1000) return score + ply;
+        if (score <= -MATE + 1000) return score - ply;
         return score;
     }
 
-    static int from_tt_score(int score, int ply) {
+    static int fromTtScore(const int score, const int ply) {
         if (score >= MATE - 1000) return score - ply;
         if (score <= -MATE + 1000) return score + ply;
         return score;
     }
 
 private:
-    static int getPieceSquareValue(const int *pst, const uint8_t position, const PieceColor c) {
+    static int getPieceSquareValue(const short *pst, const uint8_t position, const PieceColor c) {
         return (c == PieceColor::WHITE) ? pst[position ^ 56] : pst[position];
     }
 
 
-    static int getMaterialScore(const std::unique_ptr<Board> &board) {
+    static int getMaterialScore(const Board &board) {
         int score = 0;
 
         auto add = [&](const PieceColor &color, const PieceType &type, const int &value) {
-            score += (color == PieceColor::WHITE ? +value : -value) * Bitboards::popCount64(board->pieces[color][type]);
+            score += (color == PieceColor::WHITE ? value : -value) * Bitboards::popCount64(board.pieces[color][type]);
         };
 
         add(PieceColor::WHITE, PieceType::PAWN, VALUE_PAWN);
@@ -124,17 +129,17 @@ private:
     }
 
 
-    static int getPieceSquareTableScore(const std::unique_ptr<Board> &board) {
+    static int getPieceSquareTableScore(const Board &board) {
         int score = 0;
 
-        auto acc = [&](const PieceColor &color, const PieceType &type, const int *pst) {
-            BitBoard bb = board->pieces[color][type];
+        auto acc = [&](const PieceColor &color, const PieceType &type, const short *pst) {
+            BitBoard bb = board.pieces[color][type];
             while (bb) {
                 const uint8_t position = __builtin_ctzll(bb);
                 score += (color == PieceColor::WHITE
-                              ? +getPieceSquareValue(pst, position, color)
+                              ? getPieceSquareValue(pst, position, color)
                               : -getPieceSquareValue(pst, position, color));
-                bb &=(bb - 1);
+                bb &= (bb - 1);
             }
         };
 
@@ -152,6 +157,10 @@ private:
         //
         acc(PieceColor::WHITE, PieceType::QUEEN, PST_QUEEN);
         acc(PieceColor::BLACK, PieceType::QUEEN, PST_QUEEN);
+
+        //
+        acc(PieceColor::WHITE, PieceType::KING, PST_KING);
+        acc(PieceColor::BLACK, PieceType::KING, PST_KING);
 
         return score;
     }

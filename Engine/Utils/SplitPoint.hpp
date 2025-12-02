@@ -16,17 +16,17 @@ struct SplitPoint {
     const int ply;
     const bool pvNode;
 
-    const std::unique_ptr<Board> &parent;
+    const Board &parent;
 
     std::vector<Move::Move> moves;
     std::atomic<int> nextIdx{0};
     std::atomic<int> active{0};
     std::atomic<bool> abort{false};
 
-    SplitPoint(const std::unique_ptr<Board> &parent, const int alpha, const int beta, const int depth, const int ply,
+    SplitPoint(const Board &parent, const int alpha, const int beta, const int depth, const int ply,
                const bool pvNode, const std::vector<Move::Move> &moves)
         : alpha(alpha), beta(beta), bestScore(Evaluation::NEG_INF), bestMove(0),
           depth(depth), ply(ply), pvNode(pvNode), parent(parent), moves(moves) {
-        std::cout << "SplitPoint::SplitPoint()" << std::endl;
+        // std::cout << "SplitPoint::SplitPoint()" << std::endl;
     }
 };
