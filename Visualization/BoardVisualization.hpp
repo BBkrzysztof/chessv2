@@ -7,12 +7,11 @@
 
 class BoardVisualization {
 public:
-    //@todo remove static
     static void drawBoard(sf::RenderWindow &window) {
-        const float boardX = 40.f;
-        const float boardY = 40.f;
-        const float boardSize = 640.f;
-        const float cellSize = boardSize / 8.f;
+        constexpr float boardX = 40.f;
+        constexpr float boardY = 40.f;
+        constexpr float boardSize = 640.f;
+        constexpr float cellSize = boardSize / 8.f;
 
         sf::RectangleShape boardBackground;
         boardBackground.setPosition({boardX - 10.f, boardY - 10.f});
@@ -32,24 +31,14 @@ public:
                     boardX + static_cast<float>(file) * cellSize,
                     boardY + static_cast<float>(rank) * cellSize
                 });
-                bool isLight = ((rank + file) % 2 == 0);
+                const bool isLight = ((rank + file) % 2 == 0);
                 sq.setFillColor(isLight ? boardLight : boardDark);
                 squares.push_back(sq);
             }
         }
 
-        std::vector<Pawn> pawns;
-        for (int file = 0; file < 8; ++file) {
-            Pawn pawn(PieceColor::WHITE);
-            float cx = boardX + file * cellSize ;
-            float cy = boardY + 6 * cellSize + cellSize;
-            pawn.sprite.setPosition({cx, cy});
-            pawns.push_back(pawn);
-        }
-
         window.draw(boardBackground);
         for (const auto &sq: squares) window.draw(sq);
-        for (const auto &sq: pawns) window.draw(sq.sprite);
     }
 
 private:

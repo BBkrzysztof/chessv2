@@ -1,16 +1,20 @@
+#pragma once
 #include <SFML/Graphics/Sprite.hpp>
+#include <utility>
 
 #include "../../Board/Board.hpp"
 #include "../PiecesAssets/Assets.hpp"
 
-class Pawn {
+class Piece {
 public:
-    explicit Pawn(const PieceColor &color = PieceColor::WHITE) : sprite(whitePawnTexture) {
-        this->color = color;
-        this->sprite = sf::Sprite(whitePawnTexture);
-        this->sprite.scale({0.8f, 0.8});
+    explicit Piece(
+        const PieceColor &color = PieceColor::WHITE,
+        const PieceType &type = PieceType::PAWN,
+        const sf::Texture& texture = whitePawnTexture
+    ) : color(color), pieceType(type), sprite(texture) {
     }
 
     PieceColor color;
+    PieceType pieceType;
     sf::Sprite sprite;
 };
