@@ -29,10 +29,11 @@ add_executable(chess
         Board/Zobrist.hpp
         Engine/AlphaBeta/AlphaBeta.hpp
         MoveGenerator/MoveExecutor/UndoInfo.hpp
-        Visualization/BoardVisualization.hpp
+        Visualization/BoardDrawer.hpp
         Visualization/Colors.hpp
-        Visualization/Pieces/Pawn.hpp
-        Visualization/PiecesAssets/Assets.hpp
+        Visualization/Pieces/Piece.hpp
+        Visualization/Pieces/Assetss/Assets.hpp
+        Visualization/GameStateDrawer.hpp
 )
 
 target_link_libraries(chess

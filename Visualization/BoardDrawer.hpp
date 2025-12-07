@@ -1,17 +1,20 @@
+#pragma once
+
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 
 #include "Colors.hpp"
 #include "../Board/Board.hpp"
-#include "Pieces/Pawn.hpp"
 
-class BoardVisualization {
+constexpr float boardX = 40.f;
+constexpr float boardY = 40.f;
+constexpr float boardSize = 640.f;
+constexpr float cellSize = boardSize / 8.f;
+
+class BoardDrawer {
 public:
     static void drawBoard(sf::RenderWindow &window) {
-        constexpr float boardX = 40.f;
-        constexpr float boardY = 40.f;
-        constexpr float boardSize = 640.f;
-        constexpr float cellSize = boardSize / 8.f;
+
 
         sf::RectangleShape boardBackground;
         boardBackground.setPosition({boardX - 10.f, boardY - 10.f});

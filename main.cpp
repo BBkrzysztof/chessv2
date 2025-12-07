@@ -38,27 +38,52 @@
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
-
-#include "Visualization/BoardVisualization.hpp"
+#include  "Parser/Parser.cpp"
+#include "Visualization/BoardDrawer.hpp"
+#include "Visualization/GameStateDrawer.hpp"
 
 int main() {
-    // Tworzymy okno SFML
-    sf::RenderWindow window(sf::VideoMode({1152, 768}, 600), "Chess Engine UI");
+    sf::RenderWindow window(
+        sf::VideoMode({1152, 768}, 600),
+        "Chess Engine UI",
+        sf::Style::Default,
+        sf::State::Windowed,
+        sf::ContextSettings({0, 0, 8})
+    );
     window.setFramerateLimit(30);
     auto test = ImGui::SFML::Init(window);
     window.setVisible(true);
     window.requestFocus();
     sf::Clock deltaClock;
 
+    //const std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    const std::string fen = "rnb2knQ/pppbppp1/4qrp1/8/8/3P4/PPP1PPP1/RNBQKBNR b Q - 0 2";
+    const auto board = Parser::loadFen(fen);
+
+    //@todo add legit gameState struct/class
+    int selectedPiece = -1;
+
     while (window.isOpen()) {
-        while (const auto event = window.pollEvent()) {
+        while (const std::optional<sf::Event> event = window.pollEvent()) {
+            if (event == std::nullopt) {
+                continue;
+            }
+
+            if (event->is<sf::Event::Closed>()) {
+                window.close();
+                break;
+            }
+
             ImGui::SFML::ProcessEvent(window, event.value());
         }
 
         ImGui::SFML::Update(window, deltaClock.restart());
         window.clear(bgColor);
 
-        BoardVisualization::drawBoard(window);
+        BoardDrawer::drawBoard(window);
+        GameStateDrawer::draw(window, board, selectedPiece);
+
+
         ImGui::SFML::Render(window);
         window.display();
     }
