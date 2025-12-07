@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.24)
-project(chess)
-
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(imgui CONFIG REQUIRED)
+find_package(ImGui-SFML CONFIG REQUIRED)
+find_package(SFML COMPONENTS Network Graphics Window Audio System CONFIG REQUIRED)
 
 add_executable(chess
         main.cpp
@@ -10,7 +13,6 @@ add_executable(chess
         MoveGenerator/PieceAttacks/PawnAttack.hpp
         MoveGenerator/PieceAttacks/KingAttack.hpp
         MoveGenerator/PreComputedMoves/PreComputedMoves.hpp
-        MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
         MoveGenerator/PreComputedMoves/MagicBoardIndexGenerator.hpp
         MoveGenerator/Move/Move.hpp
         Board/Board.hpp
@@ -26,10 +28,21 @@ add_executable(chess
         Engine/TranspositionTable/TranspositionTable.hpp
         Board/Zobrist.hpp
         Engine/AlphaBeta/AlphaBeta.hpp
-        MoveGenerator/MoveExecutor/UndoInfo.hpp)
+        MoveGenerator/MoveExecutor/UndoInfo.hpp
+        Visualization/BoardVisualization.hpp
+        Visualization/Colors.hpp
+        Visualization/Pieces/Pawn.hpp
+        Visualization/PiecesAssets/Assets.hpp
+)
 
-add_test(NAME unit_tests COMMAND tests)
+target_link_libraries(chess
+        PRIVATE
+        SFML::Graphics
+        SFML::Window
+        SFML::Audio
+        SFML::System
+        ImGui-SFML::ImGui-SFML
+)
 
-# Optymalizacje jak chcesz (tu O3 + native)
-#target_compile_options(chess PRIVATE -O3 -march=native)
-#target_compile_options(chess PRIVATE)
+# Możesz sobie włączyć optymalizacje:
+# target_compile_options(chess PRIVATE -O3 -march=native)
