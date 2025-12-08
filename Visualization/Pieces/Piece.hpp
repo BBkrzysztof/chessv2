@@ -28,7 +28,7 @@ public:
             circle.setPosition(positionVector);
             circle.move({cellSize / 2, cellSize / 2});
 
-            circle.setFillColor(sf::Color(47, 85, 104));
+            circle.setFillColor(sf::Color(47, 85, 104,240));
             this->selectionIndicator.emplace(circle);
         }
     }

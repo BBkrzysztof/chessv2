@@ -40,7 +40,7 @@
 #include <imgui-SFML.h>
 #include  "Parser/Parser.cpp"
 #include "Visualization/BoardDrawer.hpp"
-#include "Visualization/GameStateDrawer.hpp"
+#include "Visualization/GameState/GameStateDrawer.hpp"
 
 int main() {
     sf::RenderWindow window(
@@ -60,8 +60,7 @@ int main() {
     const std::string fen = "rnb2knQ/pppbppp1/4qrp1/8/8/3P4/PPP1PPP1/RNBQKBNR b Q - 0 2";
     const auto board = Parser::loadFen(fen);
 
-    //@todo add legit gameState struct/class
-    int selectedPiece = -1;
+    GameState state{-1, board};
 
     while (window.isOpen()) {
         while (const std::optional<sf::Event> event = window.pollEvent()) {
@@ -81,14 +80,12 @@ int main() {
         window.clear(bgColor);
 
         BoardDrawer::drawBoard(window);
-        GameStateDrawer::draw(window, board, selectedPiece);
-
+        GameStateDrawer::draw(window, state);
 
         ImGui::SFML::Render(window);
         window.display();
     }
 
-    // Shutdown
     ImGui::SFML::Shutdown();
     return 0;
 }

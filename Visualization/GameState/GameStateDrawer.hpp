@@ -1,24 +1,25 @@
 #pragma once
 #include <SFML/Graphics/RenderWindow.hpp>
 
-#include "../Board/Board.hpp"
-#include "Pieces/Piece.hpp"
+#include "GameState.hpp"
+#include "../../Board/Board.hpp"
+#include "../Pieces/Piece.hpp"
 
 class GameStateDrawer {
 public:
-    static void draw(sf::RenderWindow &window, const Board &board, int &selectedPiece) {
+    static void draw(sf::RenderWindow &window, GameState &state) {
         std::vector<Piece> pieces;
         pieces.reserve(64);
 
-        const auto pieceExtractor = [&pieces, &board, &window, &selectedPiece](
+        const auto pieceExtractor = [&pieces, &window, &state](
             const PieceColor &color,
             const PieceType &type,
             const sf::Texture &texture
         ) {
-            for (BitBoard temp = board.pieces[color][type]; temp; Bitboards::pop_lsb(temp)) {
+            for (BitBoard temp = state.board.pieces[color][type]; temp; Bitboards::pop_lsb(temp)) {
                 const auto position = static_cast<uint8_t>(Bitboards::lsb_index(temp));
                 // xor with 56 flips Bitboard to drawn board orientation
-                auto piece = Piece(color, type, texture, position ^ 56, position == selectedPiece);
+                auto piece = Piece(color, type, texture, position ^ 56, position == state.selectedPiece);
                 pieces.push_back(piece);
 
                 if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
@@ -26,13 +27,12 @@ public:
                     auto bounds = piece.sprite.getGlobalBounds();
 
                     if (bounds.contains(sf::Vector2<float>(mousePosition))) {
-                        //@todo block selecting ai player side
-                        if (board.side != piece.color) {
+                        if (state.board.side != piece.color) {
                             continue;
                         }
 
                         piece.selected = !piece.selected;
-                        selectedPiece = position;
+                        state.selectedPiece = position;
                     }
                 }
             }

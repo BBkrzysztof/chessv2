@@ -33,7 +33,7 @@ add_executable(chess
         Visualization/Colors.hpp
         Visualization/Pieces/Piece.hpp
         Visualization/Pieces/Assetss/Assets.hpp
-        Visualization/GameStateDrawer.hpp
+        Visualization/GameState/GameStateDrawer.hpp
 )
 
 target_link_libraries(chess
