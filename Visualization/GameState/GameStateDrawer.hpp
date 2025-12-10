@@ -3,6 +3,8 @@
 
 #include "GameState.hpp"
 #include "../../Board/Board.hpp"
+#include "../../MoveGenerator/PseudoLegalMovesGenerator/PseudoLegalMovesGenerator.hpp"
+#include "../MovesGenerator/MovesGenerator.hpp"
 #include "../Pieces/Piece.hpp"
 
 class GameStateDrawer {
@@ -54,7 +56,18 @@ public:
 
         for (const auto &piece: pieces) {
             if (const auto selectedIndicator = piece.selectionIndicator; selectedIndicator.has_value()) {
+                Move::MoveList moves;
+                moves.m.reserve(128);
+
+                const auto parsedPosition = piece.position ^ 56;
+
+                if (state.moves[parsedPosition].empty()) {
+                    MovesGenerator::emit(piece.color, piece.pieceType, state.board, parsedPosition, state);
+                }
                 window.draw(piece.selectionIndicator.value());
+                for (const auto &moveIndicators: state.moves[parsedPosition]) {
+                    window.draw(moveIndicators.second.getSelectionIndicator());
+                }
             }
             window.draw(piece.sprite);
         }

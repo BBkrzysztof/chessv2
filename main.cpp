@@ -57,10 +57,12 @@ int main() {
     sf::Clock deltaClock;
 
     //const std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    const std::string fen = "rnb2knQ/pppbppp1/4qrp1/8/8/3P4/PPP1PPP1/RNBQKBNR b Q - 0 2";
+    const std::string fen = "rnb2knQ/pppbppp1/4qrp1/8/8/3P4/PPP1PPP1/RNBQKBNR w Q - 0 2";
     const auto board = Parser::loadFen(fen);
 
     GameState state{-1, board};
+
+
 
     while (window.isOpen()) {
         while (const std::optional<sf::Event> event = window.pollEvent()) {

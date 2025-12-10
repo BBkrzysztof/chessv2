@@ -9,3 +9,6 @@ constexpr sf::Color inputBg(60, 60, 60);
 constexpr sf::Color buttonBrown(120, 70, 25);
 constexpr sf::Color buttonRed(170, 30, 30);
 constexpr sf::Color textColor(230, 230, 230);
+constexpr sf::Color indicatorGreen(57, 191, 70);
+constexpr sf::Color indicatorRed(255, 84, 81);
+constexpr sf::Color indicatorPurple(145, 115, 255);

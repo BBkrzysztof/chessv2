@@ -10,10 +10,10 @@ public:
         const PieceColor &color = PieceColor::WHITE,
         const PieceType &type = PieceType::PAWN,
         const sf::Texture &texture = Assets::whitePawnTexture,
-        const uint8_t &position = 0,
+        const uint8_t position = 0,
         const bool selected = false
-    ) : color(color), pieceType(type), sprite(texture), position(position), selected(selected),
-        selectionIndicator(std::nullopt) {
+    ) : color(color), pieceType(type), sprite(texture), selectionIndicator(std::nullopt), position(position),
+        selected(selected) {
         const auto positionVector = sf::Vector2f(
             boardX + cellSize * static_cast<float>(Bitboards::column_of(this->position)),
             boardY + cellSize * static_cast<float>(Bitboards::row_of(this->position))

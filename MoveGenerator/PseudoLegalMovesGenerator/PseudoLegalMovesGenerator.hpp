@@ -148,7 +148,8 @@ public:
         return false;
     }
 
-private:
+    //@todo change to private
+public:
     static void getKingMovesWithoutCastle(
         const PieceColor &color,
         const Board &board,

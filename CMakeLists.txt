@@ -34,6 +34,8 @@ add_executable(chess
         Visualization/Pieces/Piece.hpp
         Visualization/Pieces/Assetss/Assets.hpp
         Visualization/GameState/GameStateDrawer.hpp
+        Visualization/MovesGenerator/MovesGenerator.hpp
+        Visualization/MoveIndicator/MoveIndicator.hpp
 )
 
 target_link_libraries(chess
