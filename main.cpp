@@ -63,7 +63,7 @@ int main() {
     GameState state{-1, board};
 
 
-
+    // save move-task into  GameState -> an the end of the loop, perform move from job, then overWrite state with new data
     while (window.isOpen()) {
         while (const std::optional<sf::Event> event = window.pollEvent()) {
             if (event == std::nullopt) {
@@ -77,6 +77,14 @@ int main() {
 
             ImGui::SFML::ProcessEvent(window, event.value());
         }
+
+        if (state.moveOrder != std::nullopt) {
+            state.board = MoveExecutor::executeMoveCopyMake(state.board,state.moveOrder.value());
+            state.moveOrder = std::nullopt;
+            state.selectedPiece=-1;
+            state.moves = {};
+        }
+
 
         ImGui::SFML::Update(window, deltaClock.restart());
         window.clear(bgColor);

@@ -27,6 +27,8 @@ public:
         );
 
         this->selectionIndicator.setRadius(cellSize * 0.45f);
+        this->setIndicatorColor(moveType);
+
         this->selectionIndicator.setOrigin({
             this->selectionIndicator.getRadius(),
             this->selectionIndicator.getRadius()
@@ -35,7 +37,6 @@ public:
         this->selectionIndicator.setPosition(positionVector);
         this->selectionIndicator.move({cellSize / 2, cellSize / 2});
 
-        this->setIndicatorColor(moveType);
     };
 
     sf::CircleShape getSelectionIndicator() const {
@@ -52,6 +53,7 @@ private:
     void setIndicatorColor(const VisualizationMoveType type) {
         switch (type) {
             case MT_NORMAL:
+                this->selectionIndicator.setRadius(cellSize * 0.3f);
                 selectionIndicator.setFillColor(indicatorGreen);
                 break;
             case MT_ENPASSANT:

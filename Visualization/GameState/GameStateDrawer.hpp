@@ -67,7 +67,21 @@ public:
                 window.draw(piece.selectionIndicator.value());
                 for (const auto &moveIndicators: state.moves[parsedPosition]) {
                     window.draw(moveIndicators.second.getSelectionIndicator());
+
+                    if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+                        auto mousePosition = sf::Mouse::getPosition(window);
+                        auto bounds = moveIndicators.second.getSelectionIndicator().getGlobalBounds();
+
+                        if (bounds.contains(sf::Vector2<float>(mousePosition))) {
+                            if (state.board.side != piece.color) {
+                                continue;
+                            }
+                            state.moveOrder=moveIndicators.first;
+                        }
+                    }
                 }
+
+
             }
             window.draw(piece.sprite);
         }

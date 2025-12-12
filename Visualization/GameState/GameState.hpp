@@ -5,7 +5,7 @@
 struct GameState {
     int selectedPiece = -1;
     Board board = {};
-
+    std::optional<Move::Move> moveOrder = std::nullopt;
     std::vector<std::vector<std::pair<Move::Move, MoveIndicator> > > moves = {};
 
     GameState(
