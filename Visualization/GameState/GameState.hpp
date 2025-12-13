@@ -2,7 +2,8 @@
 #include "../../Board/Board.hpp"
 #include "../MoveIndicator/MoveIndicator.hpp"
 
-struct GameState {
+class GameState {
+public:
     int selectedPiece = -1;
     Board board = {};
     std::optional<Move::Move> moveOrder = std::nullopt;
@@ -13,5 +14,13 @@ struct GameState {
         const Board &board
     ) : selectedPiece(selectedPiece), board(board), moves({}) {
         moves.resize(64);
+    }
+
+    void setNewBoard(const Board &newBoard) {
+        this->board = newBoard;
+        this->selectedPiece = -1;
+        this->moveOrder = std::nullopt;
+        this->moves.clear();
+        this->moves.resize(64);
     }
 };

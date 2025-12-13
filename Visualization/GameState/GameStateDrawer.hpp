@@ -80,9 +80,10 @@ public:
                         }
                     }
                 }
-
-
             }
+        }
+
+        for (const auto &piece: pieces) {
             window.draw(piece.sprite);
         }
     }

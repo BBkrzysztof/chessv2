@@ -79,10 +79,8 @@ int main() {
         }
 
         if (state.moveOrder != std::nullopt) {
-            state.board = MoveExecutor::executeMoveCopyMake(state.board,state.moveOrder.value());
-            state.moveOrder = std::nullopt;
-            state.selectedPiece=-1;
-            state.moves = {};
+            state.setNewBoard(MoveExecutor::executeMoveCopyMake(state.board, state.moveOrder.value()));
+            continue;
         }
 
 
