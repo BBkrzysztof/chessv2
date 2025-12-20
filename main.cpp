@@ -41,6 +41,7 @@
 #include  "Parser/Parser.cpp"
 #include "Visualization/BoardDrawer.hpp"
 #include "Visualization/GameState/GameStateDrawer.hpp"
+#include "Visualization/Modal/ModalDrawer.hpp"
 
 int main() {
     sf::RenderWindow window(
@@ -59,11 +60,8 @@ int main() {
     //const std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     const std::string fen = "rnb2knQ/pppbppp1/4qrp1/8/8/3P4/PPP1PPP1/RNBQKBNR w Q - 0 2";
     const auto board = Parser::loadFen(fen);
-
     GameState state{-1, board};
 
-
-    // save move-task into  GameState -> an the end of the loop, perform move from job, then overWrite state with new data
     while (window.isOpen()) {
         while (const std::optional<sf::Event> event = window.pollEvent()) {
             if (event == std::nullopt) {
@@ -80,6 +78,10 @@ int main() {
 
         if (state.moveOrder != std::nullopt) {
             state.setNewBoard(MoveExecutor::executeMoveCopyMake(state.board, state.moveOrder.value()));
+            if (MoveExecutor::isCheck(state.board, state.board.side)) {
+                state.checkedColor = state.board.side;
+            }
+
             continue;
         }
 
@@ -89,6 +91,8 @@ int main() {
 
         BoardDrawer::drawBoard(window);
         GameStateDrawer::draw(window, state);
+        state.isModalOpened = ModalDrawer::drawModal(window, state);
+
 
         ImGui::SFML::Render(window);
         window.display();
