@@ -41,7 +41,8 @@
 #include  "Parser/Parser.cpp"
 #include "Visualization/BoardDrawer.hpp"
 #include "Visualization/GameState/GameStateDrawer.hpp"
-#include "Visualization/Modal/ModalDrawer.hpp"
+#include "Visualization/Modal/GameStateModalDrawer.hpp"
+#include "Visualization/Modal/PromotionModalDrawer.hpp"
 
 int main() {
     sf::RenderWindow window(
@@ -58,9 +59,11 @@ int main() {
     sf::Clock deltaClock;
 
     //const std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    const std::string fen = "rnb2knQ/pppbppp1/4qrp1/8/8/3P4/PPP1PPP1/RNBQKBNR w Q - 0 2";
+    // const std::string fen = "rnb2knQ/pppbppp1/4qrp1/8/8/3P4/PPP1PPP1/RNBQKBNR w Q - 0 2";
+    const std::string fen = "rnb1k1n1/pppbpppP/4qrp1/8/8/3P4/PPP1PPP1/RNBQKBNR w Q - 0 1";
     const auto board = Parser::loadFen(fen);
     GameState state{-1, board};
+
 
     while (window.isOpen()) {
         while (const std::optional<sf::Event> event = window.pollEvent()) {
@@ -69,30 +72,46 @@ int main() {
             }
 
             if (event->is<sf::Event::Closed>()) {
+                ImGui::SFML::Shutdown();
                 window.close();
-                break;
+                return 0;
             }
 
             ImGui::SFML::ProcessEvent(window, event.value());
         }
 
-        if (state.moveOrder != std::nullopt) {
-            state.setNewBoard(MoveExecutor::executeMoveCopyMake(state.board, state.moveOrder.value()));
-            if (MoveExecutor::isCheck(state.board, state.board.side)) {
-                state.checkedColor = state.board.side;
-            }
-
-            continue;
+        ImGui::SFML::Update(window, deltaClock.restart());
+        window.clear(bgColor);
+        if (MoveExecutor::isCheck(state.board, state.board.side)) {
+            state.checkedColor = state.board.side;
         }
 
 
-        ImGui::SFML::Update(window, deltaClock.restart());
-        window.clear(bgColor);
-
         BoardDrawer::drawBoard(window);
         GameStateDrawer::draw(window, state);
-        state.isModalOpened = ModalDrawer::drawModal(window, state);
+        state.isModalOpened = GameStateModalDrawer::drawModal(window, state);
 
+        if (state.moveOrder != std::nullopt) {
+            const auto moveType = Move::moveType(state.moveOrder.value());
+            if (moveType == Move::MT_PROMOTION) {
+                state.promotionMove.emplace() = state.moveOrder.value();
+                state.isPromotionModalOpen = true;
+                state.moveOrder = std::nullopt;
+            } else {
+                state.setNewBoard(MoveExecutor::executeMoveCopyMake(state.board, state.moveOrder.value()));
+            }
+        }
+
+        if (state.isPromotionModalOpen && state.promotionMove != std::nullopt) {
+            auto result = PromotionModalDrawer::drawModal(window, state);
+            if (result != std::nullopt) {
+                state.setNewBoard(MoveExecutor::executeMoveCopyMake(state.board, result.value()));
+                state.isPromotionModalOpen = false;
+                state.promotionMove = std::nullopt;
+                state.moveOrder = std::nullopt;
+
+            }
+        }
 
         ImGui::SFML::Render(window);
         window.display();

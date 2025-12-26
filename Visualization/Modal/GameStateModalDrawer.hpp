@@ -16,7 +16,7 @@ constexpr auto brownA = ImVec4(0.38f, 0.25f, 0.12f, 1.00f);
 constexpr auto red = ImVec4(0.66f, 0.11f, 0.11f, 1.0f);
 
 
-class ModalDrawer {
+class GameStateModalDrawer {
 public:
     static bool drawModal(sf::RenderWindow &window, GameState &state) {
         ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg, ImVec4(0.f, 0.f, 0.f, 0.55f));
@@ -41,7 +41,7 @@ public:
         const auto style = parseStyle(state);
         ImGui::PushStyleColor(ImGuiCol_Border, style.color);
 
-        const auto display = ImGui::BeginPopupModal("game-state-modal", nullptr, ModalDrawer::flags);
+        const auto display = ImGui::BeginPopupModal("game-state-modal", nullptr, GameStateModalDrawer::flags);
 
         if (display) {
             ImDrawList *dl = ImGui::GetWindowDrawList();

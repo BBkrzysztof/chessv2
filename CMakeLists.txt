@@ -36,7 +36,8 @@ add_executable(chess
         Visualization/GameState/GameStateDrawer.hpp
         Visualization/MovesGenerator/MovesGenerator.hpp
         Visualization/MoveIndicator/MoveIndicator.hpp
-        Visualization/Modal/ModalDrawer.hpp
+        Visualization/Modal/GameStateModalDrawer.hpp
+        Visualization/Modal/PromotionModalDrawer.hpp
 )
 
 target_link_libraries(chess

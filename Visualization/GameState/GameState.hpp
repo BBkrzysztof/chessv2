@@ -7,6 +7,7 @@ public:
     int selectedPiece = -1;
     Board board = {};
     std::optional<Move::Move> moveOrder = std::nullopt;
+    std::optional<Move::Move> promotionMove = std::nullopt;
     std::vector<std::vector<std::pair<Move::Move, MoveIndicator> > > moves = {};
 
     std::optional<PieceColor> checkedColor = std::nullopt;
@@ -14,6 +15,7 @@ public:
 
     bool isStalemate = false;
     bool isModalOpened = false;
+    bool isPromotionModalOpen = false;
 
     GameState(
         const int selectedPiece,
