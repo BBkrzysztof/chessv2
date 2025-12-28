@@ -67,7 +67,7 @@ public:
                 window.draw(piece.checkIndicator.value());
             }
 
-            if (const auto selectedIndicator = piece.selectionIndicator; selectedIndicator.has_value()) {
+            if (const auto selectedIndicator = piece.selectionIndicator; !state.isModalOpened && selectedIndicator.has_value()) {
                 Move::MoveList moves;
                 moves.m.reserve(128);
 
