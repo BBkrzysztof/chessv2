@@ -82,13 +82,12 @@ int main() {
 
         ImGui::SFML::Update(window, deltaClock.restart());
         window.clear(bgColor);
-        if (MoveExecutor::isCheck(state.board, state.board.side)) {
-            state.checkedColor = state.board.side;
-        }
+
 
 
         BoardDrawer::drawBoard(window);
         GameStateDrawer::draw(window, state);
+        GameStateModalDrawer::parseGameState(state);
         state.isModalOpened = GameStateModalDrawer::drawModal(window, state);
 
         if (state.moveOrder != std::nullopt) {
@@ -109,7 +108,6 @@ int main() {
                 state.isPromotionModalOpen = false;
                 state.promotionMove = std::nullopt;
                 state.moveOrder = std::nullopt;
-
             }
         }
 

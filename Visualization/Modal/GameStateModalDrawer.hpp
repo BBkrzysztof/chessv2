@@ -18,6 +18,37 @@ constexpr auto red = ImVec4(0.66f, 0.11f, 0.11f, 1.0f);
 
 class GameStateModalDrawer {
 public:
+    static void parseGameState(GameState &state) {
+        auto board = state.board;
+        auto moveList = PseudoLegalMovesGenerator::generatePseudoLegalMoves(state.board);
+        moveList.m.erase(
+            std::remove_if(
+                moveList.m.begin(),
+                moveList.m.end(),
+                [&board](const auto &move) {
+                    const auto child = MoveExecutor::executeMoveCopyMake(board, move);
+                    return MoveExecutor::isCheck(child, board.side);
+                }
+            ),
+            moveList.m.end()
+        );
+
+
+        if (MoveExecutor::isCheck(state.board, state.board.side)) {
+            state.checkedColor = state.board.side;
+            if (moveList.m.empty()) {
+                state.matColor = opponentColor(state.board.side);
+                return;
+            }
+            return;
+        }
+
+        if (moveList.m.empty()) {
+            state.isStalemate = opponentColor(state.board.side);
+        }
+    }
+
+
     static bool drawModal(sf::RenderWindow &window, GameState &state) {
         ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg, ImVec4(0.f, 0.f, 0.f, 0.55f));
 
