@@ -38,6 +38,8 @@ add_executable(chess
         Visualization/MoveIndicator/MoveIndicator.hpp
         Visualization/Modal/GameStateModalDrawer.hpp
         Visualization/Modal/PromotionModalDrawer.hpp
+        Visualization/SideMenu/SideMenuDrawer.hpp
+        Visualization/ArtificialPlayer/ArtificialPlayer.hpp
 )
 
 target_link_libraries(chess

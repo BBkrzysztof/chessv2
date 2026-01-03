@@ -1,3 +1,5 @@
+#pragma once
+
 #include <SFML/Graphics/Color.hpp>
 
 constexpr sf::Color bgColor(32, 32, 32);
@@ -12,3 +14,7 @@ constexpr sf::Color textColor(230, 230, 230);
 constexpr sf::Color indicatorGreen(57, 191, 70);
 constexpr sf::Color indicatorRed(255, 84, 81);
 constexpr sf::Color indicatorPurple(145, 115, 255);
+
+
+constexpr PieceColor ARTIFICIAL_PLAYER_COLOR= PieceColor::BLACK;
+constexpr PieceColor PLAYER_COLOR= PieceColor::WHITE;

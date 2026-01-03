@@ -37,7 +37,7 @@ public:
                     auto bounds = piece.sprite.getGlobalBounds();
 
                     if (bounds.contains(sf::Vector2<float>(mousePosition))) {
-                        if (state.board.side != piece.color) {
+                        if ( state.board.side != PLAYER_COLOR || piece.color != PLAYER_COLOR) {
                             continue;
                         }
 
@@ -86,7 +86,7 @@ public:
                         auto bounds = moveIndicators.second.getSelectionIndicator().getGlobalBounds();
 
                         if (bounds.contains(sf::Vector2<float>(mousePosition))) {
-                            if (piece.checked || state.board.side != piece.color) {
+                            if ( state.board.side != PLAYER_COLOR || piece.color != PLAYER_COLOR) {
                                 continue;
                             }
                             state.moveOrder = moveIndicators.first;
