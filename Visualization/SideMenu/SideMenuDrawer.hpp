@@ -27,6 +27,8 @@ public:
             ImGuiWindowFlags_NoBringToFrontOnFocus
         );
 
+        ImGui::BeginDisabled(state.isAiPlayerRunning);
+
         ImGuiStyle &style = ImGui::GetStyle();
         style.WindowRounding = 8.0f;
         style.FrameRounding = 6.0f;
@@ -93,7 +95,7 @@ public:
             ImGui::SetScrollHereY(1.0f);
         ImGui::EndChild();
 
-
+        ImGui::EndDisabled();
         ImGui::End();
     }
 
