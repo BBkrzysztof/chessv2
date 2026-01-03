@@ -44,6 +44,7 @@ public:
         this->matColor = std::nullopt;
         this->isStalemate = false;
         this->isModalOpened = false;
+        this->fen = Parser::toFEN(newBoard);
     }
 
     void resetBoard() {
