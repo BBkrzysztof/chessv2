@@ -9,9 +9,9 @@ TEST_CASE("test apply move (pawn d2->d4)", "[pawn d4]") {
     const auto board = Parser::loadFen(fen);
 
     const auto move = Move::encodeMove(11, 27);
-    const auto newBoard = MoveExecutor::executeMove(board, move);
+    const auto newBoard = MoveExecutor::executeMoveCopyMake(board, move);
 
-    REQUIRE(newBoard->pieces[PieceColor::WHITE][PieceType::PAWN]==0x800f700);
+    REQUIRE(newBoard.pieces[PieceColor::WHITE][PieceType::PAWN]==0x800f700);
 }
 
 TEST_CASE("test capture move (pawn e4->d5)", "[pawn capture d5]") {
@@ -19,13 +19,13 @@ TEST_CASE("test capture move (pawn e4->d5)", "[pawn capture d5]") {
     const auto board = Parser::loadFen(fen);
 
     const auto move = Move::encodeMove(28, 35);
-    const auto newBoard = MoveExecutor::executeMove(board, move);
+    const auto newBoard = MoveExecutor::executeMoveCopyMake(board, move);
 
 
-    REQUIRE(newBoard->pieces[PieceColor::WHITE][PieceType::PAWN]==0x80000ef00);
-    REQUIRE(newBoard->pieces[PieceColor::BLACK][PieceType::PAWN]==0xf7000000000000);
+    REQUIRE(newBoard.pieces[PieceColor::WHITE][PieceType::PAWN]==0x80000ef00);
+    REQUIRE(newBoard.pieces[PieceColor::BLACK][PieceType::PAWN]==0xf7000000000000);
 
-    REQUIRE(board->pieces[PieceColor::BLACK][PieceType::PAWN]!=0xf7000000000000);
+    REQUIRE(board.pieces[PieceColor::BLACK][PieceType::PAWN]!=0xf7000000000000);
 }
 
 TEST_CASE("test promotion move", "[promote pawn]") {
@@ -33,11 +33,11 @@ TEST_CASE("test promotion move", "[promote pawn]") {
     const auto board = Parser::loadFen(fen);
 
     const auto move = Move::encodeMove(55, 63, Move::MoveType::MT_PROMOTION, Move::Promo::PR_QUEEN);
-    const auto newBoard = MoveExecutor::executeMove(board, move);
+    const auto newBoard = MoveExecutor::executeMoveCopyMake(board, move);
 
 
-    REQUIRE(newBoard->pieces[PieceColor::WHITE][PieceType::PAWN]==0x87700);
-    REQUIRE(newBoard->pieces[PieceColor::WHITE][PieceType::QUEEN]==0x8000000000000008);
+    REQUIRE(newBoard.pieces[PieceColor::WHITE][PieceType::PAWN]==0x87700);
+    REQUIRE(newBoard.pieces[PieceColor::WHITE][PieceType::QUEEN]==0x8000000000000008);
 
 }
 
@@ -46,11 +46,11 @@ TEST_CASE("test enpassant move", "[enpassant move]") {
     const auto board = Parser::loadFen(fen);
 
     const auto move = Move::encodeMove(39, 46, Move::MoveType::MT_ENPASSANT);
-    const auto newBoard = MoveExecutor::executeMove(board, move);
+    const auto newBoard = MoveExecutor::executeMoveCopyMake(board, move);
 
 
-    REQUIRE(newBoard->pieces[PieceColor::WHITE][PieceType::PAWN]==0x400000007f00);
-    REQUIRE(newBoard->pieces[PieceColor::BLACK][PieceType::PAWN]==0xbf000000000000);
+    REQUIRE(newBoard.pieces[PieceColor::WHITE][PieceType::PAWN]==0x400000007f00);
+    REQUIRE(newBoard.pieces[PieceColor::BLACK][PieceType::PAWN]==0xbf000000000000);
 }
 
 TEST_CASE("test white short castle move", "[white short castle move]") {
@@ -58,10 +58,10 @@ TEST_CASE("test white short castle move", "[white short castle move]") {
     const auto board = Parser::loadFen(fen);
 
     const auto move = Move::encodeMove(4, 6, Move::MoveType::MT_CASTLE);
-    const auto newBoard = MoveExecutor::executeMove(board, move);
+    const auto newBoard = MoveExecutor::executeMoveCopyMake(board, move);
 
-    REQUIRE(newBoard->pieces[PieceColor::WHITE][PieceType::ROOK]==0x21);
-    REQUIRE(newBoard->pieces[PieceColor::WHITE][PieceType::KING]==0x40);
+    REQUIRE(newBoard.pieces[PieceColor::WHITE][PieceType::ROOK]==0x21);
+    REQUIRE(newBoard.pieces[PieceColor::WHITE][PieceType::KING]==0x40);
 }
 
 TEST_CASE("test detect check", "[detect check]") {
@@ -69,8 +69,8 @@ TEST_CASE("test detect check", "[detect check]") {
     const auto board = Parser::loadFen(fen);
 
     const auto move = Move::encodeMove(12, 3);
-    const auto newBoard = MoveExecutor::executeMove(board, move);
-    MoveExecutor::isCheck(newBoard, board->side);
+    const auto newBoard = MoveExecutor::executeMoveCopyMake(board, move);
+    auto check = MoveExecutor::isCheck(newBoard, PieceColor::WHITE);
 
-    REQUIRE(newBoard->isCheck);
+    REQUIRE(check);
 }
