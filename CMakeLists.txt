@@ -50,6 +50,3 @@ target_link_libraries(chess
         SFML::System
         ImGui-SFML::ImGui-SFML
 )
-
-# Możesz sobie włączyć optymalizacje:
-# target_compile_options(chess PRIVATE -O3 -march=native)
