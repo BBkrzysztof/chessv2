@@ -42,7 +42,6 @@ public:
             }
 
             const auto score = -PvSplit::searchPvSplit(pool, config, board, table,  alpha, beta, config.maxDepth, 1);
-            // std::cout << score << std::endl;
             MoveExecutor::unmakeMove(board, move,undo);
 
             if (score > beta) {

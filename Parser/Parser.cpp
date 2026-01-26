@@ -11,10 +11,6 @@ public:
     static Board loadFen(const std::string_view fen) {
         using namespace std::literals;
         Board board;
-
-
-        // 1) Podziel na 6 pól FEN
-        // [0] piece placement, [1] side, [2] castling, [3] ep, [4] halfmove, [5] fullmove
         std::string_view fields[6];
         {
             size_t i = 0, start = 0, f = 0;
@@ -27,10 +23,9 @@ public:
             }
         }
 
-        // 3) Piece placement
         {
             const auto &pp = fields[0];
-            int row = 7, col = 0; // zaczynamy od rank 8 (row=7), do 1 (row=0)
+            int row = 7, col = 0;
             for (size_t i = 0; i < pp.size(); ++i) {
                 char c = pp[i];
                 if (c == '/') {
@@ -53,45 +48,40 @@ public:
             }
         }
 
-        // 4) Side to move
         {
             char c = fields[1][0];
             if (c == 'w') board.side = PieceColor::WHITE;
             else if (c == 'b') board.side = PieceColor::BLACK;
         }
 
-        // 5) Castling rights
         {
             board.castle = 0;
             auto cs = fields[2];
             if (cs == "-"sv) {
-                // brak praw
             } else {
                 for (const char &c: cs) {
                     switch (c) {
                         case 'K':
                             board.castle |= 1;
-                            break; // white short
+                            break;
                         case 'Q':
                             board.castle |= 2;
-                            break; // white long
+                            break;
                         case 'k':
                             board.castle |= 4;
-                            break; // black short
+                            break;
                         case 'q':
                             board.castle |= 8;
-                            break; // black long
+                            break;
                     }
                 }
             }
         }
 
-        // 6) En passant
         {
             board.ep = parseEpSquare(fields[3]);
         }
 
-        // 7) Opcjonalne halfmove/fullmove
         if (!fields[4].empty()) {
             parseUint(fields[4], board.halfMove);
         } else board.halfMove = 0;
@@ -106,6 +96,70 @@ public:
         return board;
     }
 
+    static std::string toFEN(const Board& b) {
+        std::string fen;
+
+        for (int rank = 7; rank >= 0; --rank) {
+            int empty = 0;
+
+            for (int file = 0; file < 8; ++file) {
+                int sq = rank * 8 + file;
+                int p = b.pieceOn[sq];
+
+                if (p == -1) {
+                    empty++;
+                } else {
+                    if (empty > 0) {
+                        fen += char('0' + empty);
+                        empty = 0;
+                    }
+
+                    PieceColor color = static_cast<PieceColor>(p / 6);
+                    PieceType  type  = static_cast<PieceType>(p % 6);
+
+                    fen += pieceToFenChar(color, type);
+                }
+            }
+
+            if (empty > 0)
+                fen += char('0' + empty);
+
+            if (rank > 0)
+                fen += '/';
+        }
+
+        fen += ' ';
+        fen += (b.side == WHITE ? 'w' : 'b');
+
+        fen += ' ';
+        if (b.castle == 0) {
+            fen += '-';
+        } else {
+            if (b.castle & 1) fen += 'K';
+            if (b.castle & 2) fen += 'Q';
+            if (b.castle & 4) fen += 'k';
+            if (b.castle & 8) fen += 'q';
+        }
+
+        fen += ' ';
+        if (b.ep == -1) {
+            fen += '-';
+        } else {
+            char file = 'a' + (b.ep % 8);
+            char rank = '1' + (b.ep / 8);
+            fen += file;
+            fen += rank;
+        }
+
+        fen += ' ';
+        fen += std::to_string(b.halfMove);
+
+        fen += ' ';
+        fen += std::to_string(b.fullMove);
+
+        return fen;
+    }
+
 private:
     static int fileCharToCol(const char &f) {
         if (f < 'a' || f > 'h') return -1;
@@ -117,7 +171,6 @@ private:
         return static_cast<int>(r - '1');
     }
 
-    // Zwraca sq (0..63) lub -1 gdy brak („-”)
     static int parseEpSquare(const std::string_view tok) {
         if (tok == "-"sv) return -1;
         if (tok.size() != 2) return -1;
@@ -135,13 +188,18 @@ private:
         out = v;
     }
 
+    static char pieceToFenChar(const PieceColor color, const PieceType type) {
+        static const char table[6] = {'p', 'n', 'b', 'r', 'q', 'k'};
+        const char c = table[type];
+        return (color == WHITE) ? std::toupper(c) : c;
+    }
+
     static void fenCharToPieceTypeAndColor(
         const char &c,
         PieceColor &col,
         PieceType &pc
     ) {
         switch (c) {
-            // białe
             case 'P':
                 col = PieceColor::WHITE;
                 pc = PieceType::PAWN;
@@ -166,7 +224,6 @@ private:
                 col = PieceColor::WHITE;
                 pc = PieceType::KING;
                 break;
-            // czarne
             case 'p':
                 col = PieceColor::BLACK;
                 pc = PieceType::PAWN;
